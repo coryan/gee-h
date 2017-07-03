@@ -4,6 +4,14 @@
 #include <iostream>
 
 namespace gh {
+/**
+ * Represent the state machine for a etcd session.
+ *
+ * A @c session is an abstraction to create and maintain etcd Leases.  The class uses a state machine to represent
+ * the possible transitions based on both asynchronous events from the etcd server, as well as local member function
+ * calls from the application.  This enum makes the state machine explicit.  Its main purpose is to help us debug the
+ * state machine transitions through logging, and to ignore requests that are invalid once certain states are reached.
+ */
 enum class session_state {
   /**
    * Initial state.
