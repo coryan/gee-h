@@ -1,0 +1,94 @@
+---
+# Start from the LLVM style
+BasedOnStyle: LLVM
+IndentWidth: 2
+---
+# We are writing mostly C++11, this means we can say Foo<Bar<T>>
+Language: Cpp
+Standard: Cpp11
+
+# If template parameters and/or function arguments do not fit in a
+# line we want a break to the next line.  So things like:
+#   template <typename T1, typename T2>
+# if they fit in a line, but:
+#   template <
+#       typename T1, typename T2>
+# if they do not.  Same thing for function calls.
+AlignAfterOpenBracket: AlwaysBreak
+
+# Do not like:
+#    int foo() { return 42; }
+AllowShortFunctionsOnASingleLine: None
+
+# Nor do we like:
+#    if (true) { return 42; }
+AllowShortBlocksOnASingleLine: false
+
+# We do not want
+#   template <typename X> class Foo { };
+# the class thing should go in the next line.
+AlwaysBreakTemplateDeclarations: true
+
+# We want as many arguments and template parameters as possible on the
+# same line, so no:
+#   foo(
+#     a,
+#     b,
+#     c)
+# when this would fit on a line:
+#   foo(
+#     a, b, c)
+BinPackArguments: true
+BinPackParameters: true
+
+# This is controversial, in JayBeams we do:
+#   Foo::Foo()
+#     : Base()
+#     , member_()
+#     , other_member_() {
+#   }
+#
+BreakConstructorInitializersBeforeComma: true
+
+# I know it has been a few years since punched cards were a thing.
+# We could argue for a different number, but it must be something
+# narrow enough that I can read the code with less(1) on a typical
+# terminal on a laptop ...
+ColumnLimit: 80
+
+# Make more money this way, I knew it all along.
+UseTab: Never
+
+# We want:
+#  int* foo;
+# instead of
+#  int *foo;
+PointerAlignment: Left
+
+# We want to treat files ending in _ut.cpp (unit tests), and _bm.cpp
+# (benchmarks) as the "main" include, so the header shows up first.
+IncludeIsMainRegex: '(_ut)?$'
+
+# Sort the includes by dependency order
+IncludeCategories:
+  - Regex:    '^<jb/clfft/'
+    Priority: 100
+  - Regex:    '^<jb/opencl/'
+    Priority: 200
+  # Any subdirectory of jb/ has higher priority than a plain jb/
+  - Regex:    '^<jb/[^/]*/'
+    Priority: 900
+  - Regex:    '^<jb/'
+    Priority: 1000
+  - Regex:    '^<valgrind/'
+    Priority: 2000
+  - Regex:    '^<skye/'
+    Priority: 3000
+  - Regex:    '^<beast/'
+    Priority: 3500
+  - Regex:    '^<boost/'
+    Priority: 4000
+  - Regex:    '^<yaml-cpp/'
+    Priority: 5000
+  - Regex:    '^<fftw3'
+    Priority: 5000
