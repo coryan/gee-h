@@ -1,6 +1,6 @@
 # gee-h
 
-A C++14 client library for etcd leader election.
+A C++14 client library for `etcd` leader election.
 
 ## Install
 
@@ -10,13 +10,6 @@ This library is built using `cmake(1)`.  On Linux and other Unix variants the us
 cmake .
 make
 make install
-```
-
-On Windows the commands are
-
-```commandline
-cmake .
-// TODO() - need to finish doco for Windows.
 ```
 
 ## LICENSE
