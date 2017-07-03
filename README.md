@@ -2,6 +2,11 @@
 
 A C++14 client library for `etcd` leader election.
 
+## Status
+
+This library is work in progress, I am splitting the code from [JayBeams](https://github.com/coryan/jaybeams/) to a 
+separate project.
+
 ## Install
 
 This library is built using `cmake(1)`.  On Linux and other Unix variants the usual commands to build it are:
