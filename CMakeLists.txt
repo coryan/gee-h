@@ -17,17 +17,12 @@ cmake_minimum_required(VERSION 3.5)
 project(gee-h)
 
 set(CMAKE_CXX_STANDARD 14)
-find_package(Protobuf REQUIRED)
 enable_testing()
 
-# add_subdirectory(ext/googletest/googletest)
 add_subdirectory(ext/googletest/googlemock)
 
 set(SOURCE_FILES gh/session_state.cpp gh/session_state.hpp)
-include_directories("${PROJECT_SOURCE_DIR}"
-        "${PROJECT_BINARY_DIR}"
-        ${Protobuf_INCLUDE_DIRS}
-        ${Boost_INCLUDE_DIRS})
+include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}")
 
 add_library(gee_h SHARED ${SOURCE_FILES})
 add_executable(gh_session_state_ut gh/session_state_ut.cpp)

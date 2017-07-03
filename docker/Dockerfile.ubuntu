@@ -1,0 +1,56 @@
+# Builds gee-h inside a docker container.
+#
+#   Copyright 2017 Carlos O'Ryan
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+
+# This Dockerfile requires docker 17.06 or higher, it uses an argument to set
+# the base image version, which was not supported in early versions of docker.
+ARG DISTRO_VERSION=16.04
+FROM ubuntu:$DISTRO_VERSION
+MAINTAINER "Carlos O'Ryan <coryan@google.com>"
+
+# Install the pre-requisites, the long command line is to create as few
+# layers as possible in the image ...
+RUN apt-get update && \
+  apt-get install --no-install-recommends --no-install-suggests -y \
+    ca-certificates \
+    clang \
+    cmake \
+    curl \
+    g++ \
+    gcc \
+    git-core \
+    libtool \
+    lsb-release \
+    make \
+    pkg-config && \
+  apt-get clean
+
+# ... capture the arguments that control the build ...
+ARG CXX_COMPILER=clang++
+
+# ... capture the Travis job number, effectively this busts the cache
+# in each build, which we want anyway ...
+ARG TRAVIS_JOB_NUMBER=
+RUN echo Running build=${TRAVIS_JOB_NUMBER}
+
+# ... copy the contents of the source code directory to the container ...
+WORKDIR /var/tmp/build-gee-h
+COPY gh /var/tmp/build-gee-h/gh
+COPY CMakeLists.txt /var/tmp/build-gee-h
+COPY ext /var/tmp/build-gee-h/ext
+
+RUN cmake -DCMAKE_CXX_COMPILER=${CXX_COMPILER} . && make -j 2 && make test
+
