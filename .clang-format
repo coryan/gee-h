@@ -54,7 +54,7 @@ BreakConstructorInitializersBeforeComma: true
 # We could argue for a different number, but it must be something
 # narrow enough that I can read the code with less(1) on a typical
 # terminal on a laptop ...
-ColumnLimit: 80
+ColumnLimit: 120
 
 # Make more money this way, I knew it all along.
 UseTab: Never
