@@ -10,8 +10,8 @@ matrix:
       env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 CXX_COMPILER=/usr/bin/clang++
     - os: linux
       compiler: clang
-      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 CXX_COMPILER=/usr/bin/clang++
-      CMAKE_FLAGS="-DCOVERAGE:BOOL=true -DCMAKE_BUILD_TYPE=Debug"
+      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 CXX_COMPILER=/usr/bin/clang++ \
+           CMAKE_FLAGS="-DCOVERAGE:BOOL=true -DCMAKE_BUILD_TYPE=Debug"
 #    - os: linux
 #      compiler: clang
 #      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04 CXX_COMPILER=/usr/bin/clang++
