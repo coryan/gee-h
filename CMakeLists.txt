@@ -37,16 +37,26 @@ if(${COVERAGE})
     )
 endif(${COVERAGE})
 
-set(SOURCE_FILES gh/session_state.cpp gh/session_state.hpp gh/prefix_end.hpp gh/prefix_end.cpp)
 include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}")
 
-add_library(gee_h SHARED ${SOURCE_FILES})
+add_library(gee_h SHARED
+        gh/detail/null_stream.hpp
+        gh/prefix_end.hpp
+        gh/prefix_end.cpp
+        gh/session_state.cpp
+        gh/session_state.hpp
+    )
 add_executable(gh_session_state_ut gh/session_state_ut.cpp)
 add_executable(gh_prefix_end_ut gh/prefix_end_ut.cpp)
+add_executable(gh_detail_null_stream_ut gh/detail/null_stream_ut.cpp)
 
 # In cmake-3.7 we could use BUILDSYSTEM_TARGETS to get the list of all targets instead of manually maintaining the
 # list here:
-set(all_unit_tests gh_session_state_ut gh_prefix_end_ut)
+set(all_unit_tests
+        gh_detail_null_stream_ut
+        gh_prefix_end_ut
+        gh_session_state_ut
+    )
 
 # Add the right libraries to all the unit tests, and also turn them into tests.
 foreach(target ${all_unit_tests})
