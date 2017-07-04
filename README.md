@@ -16,6 +16,7 @@ This library is built using `cmake(1)`.  On Linux and other Unix variants the us
 ```commandline
 cmake .
 make
+make test
 make install
 ```
 
