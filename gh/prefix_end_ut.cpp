@@ -13,11 +13,11 @@ TEST(prefix_end, basic) {
   std::string expected(buf0, buf0 + sizeof(buf0) - 1);
 
   using namespace ::testing;
-  ASSERT_THAT(actual, ElementsAre(u'\x00', u'\x00', u'\x01'));
+  ASSERT_THAT(actual, ContainerEq(expected));
 
   actual = gh::prefix_end(u8"ABC\xFF");
   char buf1[] = u8"ABD\x00";
   expected.assign(buf1, buf1 + sizeof(buf1) - 1);
-  ASSERT_THAT(actual, ElementsAre(u'A', u'B', u'D', u'\x00'));
+  ASSERT_THAT(actual, ContainerEq(expected));
 
 }
