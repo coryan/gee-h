@@ -43,23 +43,26 @@ add_library(gee_h SHARED
         gh/detail/null_stream.hpp
         gh/log_severity.hpp
         gh/log_severity.cpp
+        gh/log_sink.hpp
         gh/prefix_end.hpp
         gh/prefix_end.cpp
         gh/session_state.cpp
         gh/session_state.hpp
     )
+add_executable(gh_detail_null_stream_ut gh/detail/null_stream_ut.cpp)
 add_executable(gh_log_severity_ut gh/log_severity_ut.cpp)
+add_executable(gh_log_sink_ut  gh/log_sink_ut.cpp)
 add_executable(gh_prefix_end_ut gh/prefix_end_ut.cpp)
 add_executable(gh_session_state_ut gh/session_state_ut.cpp)
-add_executable(gh_detail_null_stream_ut gh/detail/null_stream_ut.cpp)
 
 # In cmake-3.7 we could use BUILDSYSTEM_TARGETS to get the list of all targets instead of manually maintaining the
 # list here:
 set(all_unit_tests
         gh_detail_null_stream_ut
+        gh_log_severity_ut
+        gh_log_sink_ut
         gh_prefix_end_ut
         gh_session_state_ut
-        gh_log_severity_ut
     )
 
 # Add the right libraries to all the unit tests, and also turn them into tests.
