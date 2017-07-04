@@ -52,10 +52,7 @@ script:
     fi
 
 after_success:
-  - ls -l
   - ci/upload-coverage.sh
-  - ls -l
-  - ls -l test_coverage || echo "no test_coverage"
 
 # Cache the (saved) docker images.
 # With recent version of docker one can reuse a prior image as a

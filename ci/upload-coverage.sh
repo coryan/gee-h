@@ -14,7 +14,7 @@ if [ "x${BUILD_EXTRA}" != "xCOVERAGE" ]; then
 fi
 
 IMAGE="cached-${DISTRO?}-${DISTRO_VERSION?}";
-sudo docker run --volume $PWD:/d --rm -it ${IMAGE}:tip cp -r /var/tmp/build-gee-h/test_coverage /d;
+sudo docker run --volume $PWD:/d --rm -it ${IMAGE}:tip cp -r /var/tmp/build-gee-h/build /d;
 
 if [ "x${CODECOV_TOKEN}" != "x" ]; then
     bash <(curl -s https://codecov.io/bash)  || echo "Coverage upload failed."
