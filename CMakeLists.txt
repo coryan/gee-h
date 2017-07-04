@@ -32,6 +32,10 @@ if(${COVERAGE})
     endif()
     APPEND_COVERAGE_COMPILER_FLAGS()
     SETUP_TARGET_FOR_COVERAGE_COBERTURA(
+            NAME test_gcovr
+            EXECUTABLE ctest ${ctest_parallelism}
+    )
+    SETUP_TARGET_FOR_COVERAGE(
             NAME test_coverage
             EXECUTABLE ctest ${ctest_parallelism}
     )
