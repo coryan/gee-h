@@ -1,11 +1,11 @@
-# gee-h
+# Gee-H
 
 A C++14 client library for `etcd` leader election.
 
 ## Status
 
-This library is work in progress, I am splitting the code from [JayBeams](https://github.com/coryan/jaybeams/) to a 
-separate project.
+This library is work in progress, I have a working prototype in a separate project
+([JayBeams](https://github.com/coryan/jaybeams/)) which I will be migrating to Gee-H.
 
 ## Install
 
@@ -16,6 +16,13 @@ cmake .
 make
 make install
 ```
+
+## What is that name?
+
+[Gee-H](https://en.wikipedia.org/wiki/Gee-H_(navigation)) was a radio navigation system developed during
+World War II.  It has nothing to do with leader election, or C++14, or the `etcd` server.
+I just like short names for namespaces: `gh::` in this case.
+
 
 ## LICENSE
 

@@ -21,6 +21,22 @@ enable_testing()
 
 add_subdirectory(ext/googletest/googlemock)
 
+set(COVERAGE  false CACHE BOOL "Enable code coverage builds.")
+if(${COVERAGE})
+    include(cmake/CodeCoverage.cmake)
+    include(ProcessorCount)
+    ProcessorCount(NCPUS)
+    set(ctest_parallelism "")
+    if(NOT N EQUAL 0)
+        set(ctest_parallelism "-j ${NCPUS}")
+    endif()
+    APPEND_COVERAGE_COMPILER_FLAGS()
+    SETUP_TARGET_FOR_COVERAGE_COBERTURA(
+            NAME test_coverage
+            EXECUTABLE ctest ${ctest_parallelism}
+    )
+endif(${COVERAGE})
+
 set(SOURCE_FILES gh/session_state.cpp gh/session_state.hpp)
 include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}")
 

@@ -39,6 +39,8 @@ RUN dnf makecache && \
 
 # ... capture the arguments that control the build ...
 ARG CXX_COMPILER=clang++
+ARG CMAKE_FLAGS=""
+ARG BUILD_EXTRA=""
 
 # ... capture the Travis job number, effectively this busts the cache
 # in each build, which we want anyway ...
@@ -50,6 +52,9 @@ WORKDIR /var/tmp/build-gee-h
 COPY gh /var/tmp/build-gee-h/gh
 COPY CMakeLists.txt /var/tmp/build-gee-h
 COPY ext /var/tmp/build-gee-h/ext
+COPY cmake /var/tmp/build-gee-h/cmake
 
 # ... run the configure / compile / test cycle ...
-RUN cmake -DCMAKE_CXX_COMPILER=${CXX_COMPILER} . && make -j 2 && make test
+RUN cmake -DCMAKE_CXX_COMPILER=${CXX_COMPILER} ${CMAKE_FLAGS} . && make -j 2 && make test
+
+RUN if [ "x${BUILD_EXTRA}" = "xCOVERAGE" ]; then make test_coverage || /bin/true; fi

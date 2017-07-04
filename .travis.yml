@@ -8,27 +8,31 @@ matrix:
     - os: linux
       compiler: clang
       env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 CXX_COMPILER=/usr/bin/clang++
+    - os: linux
+      compiler: clang
+      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 CXX_COMPILER=/usr/bin/clang++
+      CMAKE_FLAGS="-DCOVERAGE:BOOL=true -DCMAKE_BUILD_TYPE=Debug"
 #    - os: linux
 #      compiler: clang
-#      env: DOCKER_BUILD=no DISTRO=ubuntu DISTRO_VERSION=17.04 CXX_COMPILER=/usr/bin/clang++
+#      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04 CXX_COMPILER=/usr/bin/clang++
+    - os: linux
+      compiler: clang
+      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=24 CXX_COMPILER=/usr/bin/clang++
 #    - os: linux
 #      compiler: clang
-#      env: DOCKER_BUILD=no DISTRO=fedora DISTRO_VERSION=24 CXX_COMPILER=/usr/bin/clang++
+#      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=25 CXX_COMPILER=/usr/bin/clang++
 #    - os: linux
 #      compiler: clang
-#      env: DOCKER_BUILD=no DISTRO=fedora DISTRO_VERSION=25 CXX_COMPILER=/usr/bin/clang++
+#      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 CXX_COMPILER=/usr/bin/g++
 #    - os: linux
 #      compiler: clang
-#      env: DOCKER_BUILD=no DISTRO=ubuntu DISTRO_VERSION=16.04 CXX_COMPILER=/usr/bin/g++
+#      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04 CXX_COMPILER=/usr/bin/g++
 #    - os: linux
 #      compiler: clang
-#      env: DOCKER_BUILD=no DISTRO=ubuntu DISTRO_VERSION=17.04 CXX_COMPILER=/usr/bin/g++
+#      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=24 CXX_COMPILER=/usr/bin/g++
 #    - os: linux
 #      compiler: clang
-#      env: DOCKER_BUILD=no DISTRO=fedora DISTRO_VERSION=24 CXX_COMPILER=/usr/bin/g++
-#    - os: linux
-#      compiler: clang
-#      env: DOCKER_BUILD=no DISTRO=fedora DISTRO_VERSION=25 CXX_COMPILER=/usr/bin/g++
+#      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=25 CXX_COMPILER=/usr/bin/g++
 
 script:
   - if [ "${DOCKER_BUILD?}" = "yes" ]; then
@@ -44,9 +48,14 @@ script:
       sudo docker build -t ${IMAGE?}:tip ${cacheargs?}
           --build-arg DISTRO_VERSION=${DISTRO_VERSION?}
           --build-arg CXX_COMPILER=${CXX_COMPILER?}
+          --build-arg CMAKE_FLAGS="${CMAKE_FLAGS}
+          --build-arg BUILD_EXTRA=${BUILD_EXTRA}
           --build-arg TRAVIS_JOB_NUMBER=${TRAVIS_JOB_NUMBER}
           -f docker/Dockerfile.${DISTRO?} .;
     fi
+
+after_success:
+  - ci/upload-coverage.sh
 
 # Cache the (saved) docker images.
 # With recent version of docker one can reuse a prior image as a
