@@ -61,4 +61,3 @@ COPY cmake /var/tmp/build-gee-h/cmake
 WORKDIR /var/tmp/build-gee-h/build
 # ... run the configure / compile / test cycle ...
 RUN cmake -DCMAKE_CXX_COMPILER=${CXX_COMPILER} ${CMAKE_FLAGS} .. && make -j 2 && make test
-RUN if [ "x${BUILD_EXTRA}" = "xCOVERAGE" ]; then make test_coverage test_gcovr || /bin/true; fi
