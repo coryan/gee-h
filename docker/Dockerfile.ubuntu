@@ -31,8 +31,8 @@ RUN apt-get update && \
     curl \
     g++ \
     gcc \
-    gcovr \
     git-core \
+    lcov \
     libtool \
     lsb-release \
     make \

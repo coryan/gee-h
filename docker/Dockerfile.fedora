@@ -30,6 +30,7 @@ RUN dnf makecache && \
     curl \
     gcc-c++ \
     git \
+    lcov \
     libtool \
     make \
     pkgconfig \
