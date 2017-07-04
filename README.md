@@ -3,6 +3,8 @@
 A C++14 client library for `etcd` leader election.
 
 ## Status
+[![Build Status](https://travis-ci.org/coryan/gee-h.svg?branch=master)](https://travis-ci.org/coryan/gee-h)
+[![codecov](https://codecov.io/gh/coryan/gee-h/branch/master/graph/badge.svg)](https://codecov.io/gh/coryan/gee-h)
 
 This library is work in progress, I have a working prototype in a separate project
 ([JayBeams](https://github.com/coryan/jaybeams/)) which I will be migrating to Gee-H.
