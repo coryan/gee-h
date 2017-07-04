@@ -37,15 +37,16 @@ if(${COVERAGE})
     )
 endif(${COVERAGE})
 
-set(SOURCE_FILES gh/session_state.cpp gh/session_state.hpp)
+set(SOURCE_FILES gh/session_state.cpp gh/session_state.hpp gh/prefix_end.hpp gh/prefix_end.cpp)
 include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}")
 
 add_library(gee_h SHARED ${SOURCE_FILES})
 add_executable(gh_session_state_ut gh/session_state_ut.cpp)
+add_executable(gh_prefix_end_ut gh/prefix_end_ut.cpp)
 
 # In cmake-3.7 we could use BUILDSYSTEM_TARGETS to get the list of all targets instead of manually maintaining the
 # list here:
-set(all_unit_tests gh_session_state_ut)
+set(all_unit_tests gh_session_state_ut gh_prefix_end_ut)
 
 # Add the right libraries to all the unit tests, and also turn them into tests.
 foreach(target ${all_unit_tests})
@@ -53,7 +54,7 @@ foreach(target ${all_unit_tests})
     string(REGEX MATCH ".*_ut$" is_ut ${tname})
     if(is_ut)
         get_target_property(tname ${target} "NAME")
-        target_link_libraries(${target} gee_h gtest gtest_main)
+        target_link_libraries(${target} gee_h gmock gtest gtest_main)
         add_test(${tname} ${target})
     endif(is_ut)
 endforeach()
