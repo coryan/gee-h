@@ -67,10 +67,51 @@ TEST(log, compile_time_disable) {
     ++cnt;
     return 42;
   };
+  // ... use a level that is enabled at compile-time, but disabled at runtime ...
+  lg.min_severity(gh::severity::error);
   ASSERT_NO_THROW(
-        GH_LOG_I(trace, lg) << "testing 123"
+      GH_LOG_I(warning, lg) << "testing 123"
                             << " " << f());
   ASSERT_EQ(logs.size(), 0UL);
   ASSERT_EQ(cnt, 0);
   ASSERT_EQ(f(), 42);
+}
+
+TEST(log, compile_time_disable_only) {
+  // Creates a log that appends to a vector ...
+  gh::log lg;
+  std::vector<std::pair<gh::severity, std::string>> logs;
+  lg.add_sink(
+      gh::make_log_sink([&logs](gh::severity sev, std::string&& msg) { logs.emplace_back(sev, std::move(msg)); }));
+
+  // Even though this level is disabled at compile-time, try to re-enable messages for it at runtime.  The effect
+  // should be to keep the message disabled ...
+  lg.min_severity(gh::severity::trace);
+
+  using namespace ::testing;
+  int cnt = 0;
+  auto f = [&cnt]() {
+    ++cnt;
+    return 42;
+  };
+  ASSERT_NO_THROW(
+      GH_LOG_I(trace, lg) << "testing 123"
+                          << " " << f());
+  ASSERT_EQ(logs.size(), 0UL);
+  ASSERT_EQ(cnt, 0);
+  ASSERT_EQ(f(), 42);
+}
+
+TEST(log, instance_basic) {
+  gh::log& lg = gh::log::instance();
+  std::vector<std::pair<gh::severity, std::string>> logs;
+  lg.add_sink(
+      gh::make_log_sink([&logs](gh::severity sev, std::string&& msg) { logs.emplace_back(sev, std::move(msg)); }));
+
+  using namespace ::testing;
+  ASSERT_NO_THROW(GH_LOG(info) << "testing 123 " << 42);
+  ASSERT_EQ(logs.size(), 1UL);
+  ASSERT_EQ(logs[0].first, gh::severity::info);
+  ASSERT_THAT(logs[0].second, StartsWith("[info] testing 123 42"));
+  ASSERT_NO_THROW(lg.clear_sinks());
 }
