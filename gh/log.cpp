@@ -10,6 +10,7 @@ std::unique_ptr<log> log::singleton_;
 
 log& log::instance() {
   std::call_once(log_initialized, []() { singleton_.reset(new log); });
+  return *singleton_;
 }
 
 void log::add_sink(std::shared_ptr<log_sink> sink) {
