@@ -19,5 +19,4 @@ TEST(prefix_end, basic) {
   char buf1[] = u8"ABD\x00";
   expected.assign(buf1, buf1 + sizeof(buf1) - 1);
   ASSERT_THAT(actual, ContainerEq(expected));
-
 }
