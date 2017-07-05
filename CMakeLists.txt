@@ -119,6 +119,7 @@ set(all_unit_tests
     )
 
 # Add the right libraries to all the unit tests, and also turn them into tests.
+set(ut_sources)
 foreach(target ${all_unit_tests})
     get_target_property(tname ${target} "NAME")
     string(REGEX MATCH ".*_ut$" is_ut ${tname})
@@ -126,5 +127,10 @@ foreach(target ${all_unit_tests})
         get_target_property(tname ${target} "NAME")
         target_link_libraries(${target} gee_h gmock gtest gtest_main)
         add_test(${tname} ${target})
-    endif(is_ut)
+        get_target_property(sources ${target} "SOURCES")
+        set(ut_sources ${ut_sources} ${sources})
+    endif()
 endforeach()
+
+add_executable(all_unit_tests ${ut_sources})
+target_link_libraries(all_unit_tests gee_h gmock gtest gtest_main)
