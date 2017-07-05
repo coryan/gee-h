@@ -17,7 +17,7 @@ TEST(log, basic) {
   ASSERT_NO_THROW(
       GH_LOG_I(error, lg) << "testing 123"
                           << " " << 42);
-  ASSERT_EQ(logs.size(), 1);
+  ASSERT_EQ(logs.size(), 1UL);
   ASSERT_EQ(logs[0].first, gh::severity::error);
   ASSERT_THAT(logs[0].second, StartsWith("[error] testing 123 42"));
 }
@@ -33,7 +33,7 @@ TEST(log, run_time_disable) {
   ASSERT_NO_THROW(
       GH_LOG_I(info, lg) << "testing 123"
                          << " " << 42);
-  ASSERT_EQ(logs.size(), 1);
+  ASSERT_EQ(logs.size(), 1UL);
   ASSERT_EQ(logs[0].first, gh::severity::info);
   ASSERT_THAT(logs[0].second, StartsWith("[info] testing 123 42"));
 
@@ -47,7 +47,7 @@ TEST(log, run_time_disable) {
   ASSERT_NO_THROW(
       GH_LOG_I(info, lg) << "testing 123"
                          << " " << f());
-  ASSERT_EQ(logs.size(), 0);
+  ASSERT_EQ(logs.size(), 0UL);
   // ... also verify that disabled expressions are not even called ...
   ASSERT_EQ(cnt, 0);
   ASSERT_EQ(f(), 42);
@@ -70,6 +70,7 @@ TEST(log, compile_time_disable) {
   ASSERT_NO_THROW(
         GH_LOG_I(trace, lg) << "testing 123"
                             << " " << f());
-  ASSERT_EQ(logs.size(), 0);
+  ASSERT_EQ(logs.size(), 0UL);
   ASSERT_EQ(cnt, 0);
+  ASSERT_EQ(f(), 42);
 }
