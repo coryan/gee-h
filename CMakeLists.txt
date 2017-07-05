@@ -85,6 +85,8 @@ endif(${COVERAGE})
 include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}")
 
 add_library(gee_h SHARED
+        gh/assert_throw.hpp
+        gh/assert_throw.cpp
         gh/detail/null_stream.hpp
         gh/log.hpp
         gh/log.cpp
@@ -96,6 +98,7 @@ add_library(gee_h SHARED
         gh/session_state.cpp
         gh/session_state.hpp
     )
+add_executable(gh_assert_throw_ut gh/assert_throw_ut.cpp)
 add_executable(gh_detail_null_stream_ut gh/detail/null_stream_ut.cpp)
 add_executable(gh_log_ut gh/log_ut.cpp)
 add_executable(gh_log_severity_ut gh/log_severity_ut.cpp)
@@ -106,6 +109,7 @@ add_executable(gh_session_state_ut gh/session_state_ut.cpp)
 # In cmake-3.7 we could use BUILDSYSTEM_TARGETS to get the list of all targets instead of manually maintaining the
 # list here:
 set(all_unit_tests
+        gh_assert_throw_ut
         gh_detail_null_stream_ut
         gh_log_ut
         gh_log_severity_ut
