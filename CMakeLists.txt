@@ -14,12 +14,57 @@
 #
 
 cmake_minimum_required(VERSION 3.5)
-project(gee-h)
 
-set(CMAKE_CXX_STANDARD 14)
+set(PACKAGE_NAME "Gee-H")
+set(PACKAGE_VERSION   "0.1")
+set(PACKAGE_STRING    "${PACKAGE_NAME} ${PACKAGE_VERSION}")
+set(PACKAGE_TARNAME   "${PACKAGE_NAME}-${PACKAGE_VERSION}")
+set(PACKAGE_BUGREPORT "https://github.com/coryan/gee-h/issues")
+
+project(Gee-H CXX C)
+
+# Require C++14 for this project ...
+set(CXX_STANDARD_REQUIRED 14)
+set(CMAKE_CXX_STANDARD ${CXX_STANDARD_REQUIRED}) # for older cmake
+
+# ... the author is paranoid.  Turn on all available warnings
+# and turn warnings into errors to stop the build if any warning is
+# emitted ...
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG(-Werror COMPILER_SUPPORTS_WERROR)
+if(COMPILER_SUPPORTS_WERROR)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+endif()
+CHECK_CXX_COMPILER_FLAG(-Wall COMPILER_SUPPORTS_WALL)
+if(COMPILER_SUPPORTS_WALL)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
+endif()
+CHECK_CXX_COMPILER_FLAG(/WX COMPILER_SUPPORTS_WX)
+if(COMPILER_SUPPORTS_WX)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /WX")
+endif()
+CHECK_CXX_COMPILER_FLAG(/W4 COMPILER_SUPPORTS_SWALL)
+if(COMPILER_SUPPORTS_SWALL)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Wall")
+endif()
+
+# ... turn on testing support in CMake ...
 enable_testing()
 
+# ... external dependencies and packages ...
 add_subdirectory(ext/googletest/googlemock)
+
+# ... include the functions to compile proto files ...
+include(FindProtobuf)
+
+# ... find the protobuf, grpc, and grpc++ libraries using pkg-config ...
+include(FindPkgConfig)
+pkg_check_modules(PROTOBUF REQUIRED protobuf)
+if(NOT ${PROTOBUF_VERSION} VERSION_GREATER "3")
+    message(FATAL_ERROR "Protobuf version greater than 3.0 required by gRPC++")
+endif()
+pkg_check_modules(GRPCPP REQUIRED grpc++)
+pkg_check_modules(GRPC REQUIRED grpc)
 
 set(COVERAGE  false CACHE BOOL "Enable code coverage builds.")
 if(${COVERAGE})

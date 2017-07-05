@@ -7,29 +7,29 @@ matrix:
   include:
     - os: linux
       compiler: clang
-      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 CXX_COMPILER=/usr/bin/clang++
+      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 CXX_COMPILER=/usr/bin/clang++ C_COMPILER=/usr/bin/clang
 #    - os: linux
 #      compiler: clang
-#      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04 CXX_COMPILER=/usr/bin/clang++
+#      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04 CXX_COMPILER=/usr/bin/clang++ C_COMPILER=/usr/bin/clang
     - os: linux
       compiler: clang
-      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=24 CXX_COMPILER=/usr/bin/clang++
+      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=24 CXX_COMPILER=/usr/bin/clang++ C_COMPILER=/usr/bin/clang
 #    - os: linux
 #      compiler: clang
-#      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=25 CXX_COMPILER=/usr/bin/clang++
+#      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=25 CXX_COMPILER=/usr/bin/clang++ C_COMPILER=/usr/bin/clang
     - os: linux
       compiler: clang
-      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 CXX_COMPILER=/usr/bin/g++ \
+      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 CXX_COMPILER=/usr/bin/g++ C_COMPILER=/usr/bin/gcc \
            CMAKE_FLAGS="-DCOVERAGE:BOOL=true -DCMAKE_BUILD_TYPE=Debug" BUILD_EXTRA=COVERAGE
     - os: linux
       compiler: clang
-      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04 CXX_COMPILER=/usr/bin/g++
+      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04 CXX_COMPILER=/usr/bin/g++ C_COMPILER=/usr/bin/gcc
 #    - os: linux
 #      compiler: clang
-#      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=24 CXX_COMPILER=/usr/bin/g++
+#      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=24 CXX_COMPILER=/usr/bin/g++ C_COMPILER=/usr/bin/gcc
     - os: linux
       compiler: clang
-      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=25 CXX_COMPILER=/usr/bin/g++
+      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=25 CXX_COMPILER=/usr/bin/g++ C_COMPILER=/usr/bin/gcc
 
 script:
   - if [ "${DOCKER_BUILD?}" = "yes" ]; then

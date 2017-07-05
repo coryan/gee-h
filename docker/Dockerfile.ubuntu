@@ -25,6 +25,10 @@ MAINTAINER "Carlos O'Ryan <coryan@google.com>"
 # layers as possible in the image ...
 RUN apt-get update && \
   apt-get install --no-install-recommends --no-install-suggests -y \
+    autoconf \
+    autoconf-archive \
+    automake \
+    build-essential \
     ca-certificates \
     clang \
     cmake \
@@ -42,8 +46,16 @@ RUN apt-get update && \
 
 # ... capture the arguments that control the build ...
 ARG CXX_COMPILER=clang++
+ARG C_COMPILER=clang
 ARG CMAKE_FLAGS=""
 ARG BUILD_EXTRA=""
+
+# ... compile and install gRPC++ and Protobuf v3 ...
+WORKDIR /var/tmp/build-grpc
+RUN (git clone --depth 10 https://github.com/grpc/grpc.git && \
+    cd grpc && git pull && git submodule update --init && \
+    make -j 2 && make install && \
+    cd third_party/protobuf && make install)
 
 # ... capture the Travis job number, effectively this busts the cache
 # in each build, which we want anyway ...

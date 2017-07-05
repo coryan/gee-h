@@ -25,6 +25,9 @@ MAINTAINER "Carlos O'Ryan <coryan@google.com>"
 # layers as possible in the image ...
 RUN dnf makecache && \
   dnf install -y \
+    autoconf \
+    autoconf-archive \
+    automake \
     clang \
     cmake \
     curl \
@@ -40,8 +43,20 @@ RUN dnf makecache && \
 
 # ... capture the arguments that control the build ...
 ARG CXX_COMPILER=clang++
+ARG C_COMPILER=clang
 ARG CMAKE_FLAGS=""
 ARG BUILD_EXTRA=""
+
+WORKDIR /var/tmp/build-grpc
+RUN (git clone --depth 10 https://github.com/grpc/grpc.git && \
+    cd grpc && git pull && git submodule update --init && \
+    make -j 2 LDXX="${CXX_COMPILER} -std=c++11" LD=${C_COMPILER} CXX="${CXX_COMPILER} -std=c++11" CC=${C_COMPILER} && \
+    make install && \
+    cd third_party/protobuf && make install && \
+    echo /usr/local/lib >/etc/ld.so.conf.d/local.conf && ldconfig)
+
+# ... by default, Fedora does not look for packages in /usr/local/lib/pkgconfig ...
+ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 
 # ... capture the Travis job number, effectively this busts the cache
 # in each build, which we want anyway ...
