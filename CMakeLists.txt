@@ -41,6 +41,8 @@ include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}")
 
 add_library(gee_h SHARED
         gh/detail/null_stream.hpp
+        gh/log.hpp
+        gh/log.cpp
         gh/log_severity.hpp
         gh/log_severity.cpp
         gh/log_sink.hpp
@@ -50,6 +52,7 @@ add_library(gee_h SHARED
         gh/session_state.hpp
     )
 add_executable(gh_detail_null_stream_ut gh/detail/null_stream_ut.cpp)
+add_executable(gh_log_ut gh/log_ut.cpp)
 add_executable(gh_log_severity_ut gh/log_severity_ut.cpp)
 add_executable(gh_log_sink_ut  gh/log_sink_ut.cpp)
 add_executable(gh_prefix_end_ut gh/prefix_end_ut.cpp)
@@ -59,6 +62,7 @@ add_executable(gh_session_state_ut gh/session_state_ut.cpp)
 # list here:
 set(all_unit_tests
         gh_detail_null_stream_ut
+        gh_log_ut
         gh_log_severity_ut
         gh_log_sink_ut
         gh_prefix_end_ut

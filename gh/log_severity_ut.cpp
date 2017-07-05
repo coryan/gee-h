@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-TEST(gh_log, base) {
+TEST(log_severity, base) {
   ASSERT_LT(gh::severity::LOWEST, gh::severity::HIGHEST);
 
   using s = gh::severity;
