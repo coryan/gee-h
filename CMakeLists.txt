@@ -59,14 +59,14 @@ include(FindProtobuf)
 
 # ... find the protobuf, grpc, and grpc++ libraries using pkg-config ...
 include(FindPkgConfig)
-pkg_check_modules(PROTOBUF REQUIRED protobuf)
-if(NOT ${PROTOBUF_VERSION} VERSION_GREATER "3")
-    message(FATAL_ERROR "Protobuf version greater than 3.0 required by gRPC++")
-endif()
-pkg_check_modules(GRPCPP REQUIRED grpc++)
-pkg_check_modules(GRPC REQUIRED grpc)
+pkg_check_modules(PROTOBUF REQUIRED protobuf>=3.0)
+pkg_check_modules(GRPCPP REQUIRED grpc++>=1.0)
+pkg_check_modules(GRPC REQUIRED grpc>=4.0)
 
-set(COVERAGE  false CACHE BOOL "Enable code coverage builds.")
+link_directories(${GRPCPP_LIBRARY_DIRS} ${GRPC_LIBRARY_DIRS} ${PROTOBUF_LIBRARY_DIRS})
+include_directories(${GRPCPP_INCLUDE_DIRS} ${GRPC_INCLUDE_DIRS} ${PROTOBUF_INCLUDE_DIRS})
+
+set(COVERAGE false CACHE BOOL "Enable code coverage builds.")
 if(${COVERAGE})
     include(cmake/CodeCoverage.cmake)
     include(ProcessorCount)
@@ -87,6 +87,9 @@ include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}")
 add_library(gee_h SHARED
         gh/assert_throw.hpp
         gh/assert_throw.cpp
+        gh/detail/async_ops.hpp
+        gh/detail/base_completion_queue.hpp
+        gh/detail/base_completion_queue.cpp
         gh/detail/null_stream.hpp
         gh/log.hpp
         gh/log.cpp
@@ -98,8 +101,11 @@ add_library(gee_h SHARED
         gh/session_state.cpp
         gh/session_state.hpp
     )
+target_link_libraries(gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
+
 add_executable(gh_assert_throw_ut gh/assert_throw_ut.cpp)
 add_executable(gh_detail_null_stream_ut gh/detail/null_stream_ut.cpp)
+add_executable(gh_detail_base_completion_queue_ut gh/detail/base_completion_queue_ut.cpp)
 add_executable(gh_log_ut gh/log_ut.cpp)
 add_executable(gh_log_severity_ut gh/log_severity_ut.cpp)
 add_executable(gh_log_sink_ut  gh/log_sink_ut.cpp)
@@ -111,6 +117,7 @@ add_executable(gh_session_state_ut gh/session_state_ut.cpp)
 set(all_unit_tests
         gh_assert_throw_ut
         gh_detail_null_stream_ut
+        gh_detail_base_completion_queue_ut
         gh_log_ut
         gh_log_severity_ut
         gh_log_sink_ut
@@ -121,13 +128,13 @@ set(all_unit_tests
 # Add the right libraries to all the unit tests, and also turn them into tests.
 set(ut_sources)
 foreach(target ${all_unit_tests})
-    get_target_property(tname ${target} "NAME")
+    get_target_property(tname ${target} NAME)
     string(REGEX MATCH ".*_ut$" is_ut ${tname})
     if(is_ut)
-        get_target_property(tname ${target} "NAME")
-        target_link_libraries(${target} gee_h gmock gtest gtest_main)
+        get_target_property(tname ${target} NAME)
+        target_link_libraries(${target} gmock gtest gtest_main gee_h grpc++ grpc protobuf)
         add_test(${tname} ${target})
-        get_target_property(sources ${target} "SOURCES")
+        get_target_property(sources ${target} SOURCES)
         set(ut_sources ${ut_sources} ${sources})
     endif()
 endforeach()
