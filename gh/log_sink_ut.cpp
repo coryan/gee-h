@@ -4,6 +4,9 @@
 
 #include <sstream>
 
+/**
+ * @test Verify that the gh::make_log_sink works as expected.
+ */
 TEST(log_sink, basic) {
   std::string value;
   gh::severity sev;

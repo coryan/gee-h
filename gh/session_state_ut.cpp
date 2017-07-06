@@ -3,6 +3,9 @@
 #include <gtest/gtest.h>
 #include <sstream>
 
+/**
+ * @test Verify that the iostream operator for gh::session_state works as expected.
+ */
 TEST(session_state, streaming) {
   using s = gh::session_state;
   std::ostringstream os;

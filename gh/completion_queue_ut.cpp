@@ -13,7 +13,7 @@ struct base_completion_queue_test_only {
 }
 
 /**
- * @test Verify that one can create, run, and stop a completion queue.
+ * @test Verify that one can create, run, and stop a gh::completion_queue.
  */
 TEST(completion_queue, basic) {
   gh::completion_queue<> queue;
@@ -46,7 +46,7 @@ TEST(completion_queue, basic) {
 }
 
 /**
- * @test Make sure jb::etcd::completion_queue handles errors gracefully.
+ * @test Make sure gh::completion_queue handles errors gracefully.
  */
 TEST(completion_queue, error) {
   using namespace std::chrono_literals;

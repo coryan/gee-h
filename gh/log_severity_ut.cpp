@@ -2,6 +2,9 @@
 
 #include <gtest/gtest.h>
 
+/**
+ * @test Verify that the iostream operator for gh::severity works as expected.
+ */
 TEST(log_severity, base) {
   ASSERT_LT(gh::severity::LOWEST, gh::severity::HIGHEST);
 
