@@ -1,7 +1,7 @@
 #include "gh/detail/base_completion_queue.hpp"
 
-#include <gtest/gtest.h>
 #include <future>
+#include <gtest/gtest.h>
 
 /**
  * @test Verify that we can run and shutdown a completion queue.
@@ -9,7 +9,7 @@
 TEST(base_completion_queue, run_shutdown) {
   gh::detail::base_completion_queue queue;
   // run the event loop in a separate thread ...
-  std::promise<void > start;
+  std::promise<void> start;
   std::promise<void> end;
   std::thread t([&]() {
     start.set_value();

@@ -8,7 +8,10 @@ namespace detail {
 std::chrono::milliseconds constexpr base_completion_queue::loop_timeout;
 
 base_completion_queue::base_completion_queue()
-    : mu_(), pending_ops_(), queue_(), shutdown_(false) {
+    : mu_()
+    , pending_ops_()
+    , queue_()
+    , shutdown_(false) {
 }
 
 base_completion_queue::~base_completion_queue() {
@@ -18,16 +21,16 @@ base_completion_queue::~base_completion_queue() {
     // and just continue on our way to whatever fate awits the application.
     // TODO() - consider calling std::terminate(), raising an exception, or making the decision here a policy.
     std::ostringstream os;
-    for (auto const &op : pending_ops_) {
+    for (auto const& op : pending_ops_) {
       os << op.second->name << "\n";
     }
-    GH_LOG(error) << " completion queue deleted while holding "
-                  << pending_ops_.size() << " pending operations: " << os.str();
+    GH_LOG(error) << " completion queue deleted while holding " << pending_ops_.size()
+                  << " pending operations: " << os.str();
   }
 }
 
 void base_completion_queue::run() {
-  void *tag = nullptr;
+  void* tag = nullptr;
   bool ok = false;
   while (not shutdown_.load()) {
     auto deadline = std::chrono::system_clock::now() + loop_timeout;
@@ -50,8 +53,7 @@ void base_completion_queue::run() {
     // ... try to find the operation in our list of known operations ...
     std::shared_ptr<base_async_op> op = unregister_op(tag);
     if (not op) {
-      GH_LOG(error) << "Unknown tag reported in asynchronous operation: "
-                    << std::hex << std::intptr_t(tag);
+      GH_LOG(error) << "Unknown tag reported in asynchronous operation: " << std::hex << std::intptr_t(tag);
       continue;
     }
     // ... it was there, now it is removed, and the lock is safely
@@ -66,9 +68,8 @@ void base_completion_queue::shutdown() {
   queue_.Shutdown();
 }
 
-void *base_completion_queue::register_op(
-    char const *where, std::shared_ptr<base_async_op> op) {
-  void *tag = static_cast<void *>(op.get());
+void* base_completion_queue::register_op(char const* where, std::shared_ptr<base_async_op> op) {
+  void* tag = static_cast<void*>(op.get());
   auto key = reinterpret_cast<std::intptr_t>(tag);
   std::lock_guard<std::mutex> lock(mu_);
   auto r = pending_ops_.emplace(key, op);
@@ -76,11 +77,9 @@ void *base_completion_queue::register_op(
   return tag;
 }
 
-std::shared_ptr<base_async_op>
-base_completion_queue::unregister_op(void *tag) {
+std::shared_ptr<base_async_op> base_completion_queue::unregister_op(void* tag) {
   std::lock_guard<std::mutex> lock(mu_);
-  pending_ops_type::iterator i =
-      pending_ops_.find(reinterpret_cast<std::intptr_t>(tag));
+  pending_ops_type::iterator i = pending_ops_.find(reinterpret_cast<std::intptr_t>(tag));
   if (i != pending_ops_.end()) {
     auto op = i->second;
     pending_ops_.erase(i);
