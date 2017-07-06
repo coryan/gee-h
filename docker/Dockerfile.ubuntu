@@ -44,18 +44,17 @@ RUN apt-get update && \
     pkg-config && \
   apt-get clean
 
-# ... capture the arguments that control the build ...
-ARG CXX_COMPILER=clang++
-ARG C_COMPILER=clang
-ARG CMAKE_FLAGS=""
-ARG BUILD_EXTRA=""
-
 # ... compile and install gRPC++ and Protobuf v3 ...
 WORKDIR /var/tmp/build-grpc
 RUN (git clone --depth 10 https://github.com/grpc/grpc.git && \
     cd grpc && git pull && git submodule update --init && \
     make -j 2 && make install && \
     cd third_party/protobuf && make install)
+
+# ... capture the arguments that control the build ...
+ARG CXX_COMPILER=clang++
+ARG CMAKE_FLAGS=""
+ARG BUILD_EXTRA=""
 
 # ... capture the Travis job number, effectively this busts the cache
 # in each build, which we want anyway ...

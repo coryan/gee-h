@@ -62,10 +62,12 @@ include(FindPkgConfig)
 pkg_check_modules(PROTOBUF REQUIRED protobuf>=3.0)
 pkg_check_modules(GRPCPP REQUIRED grpc++>=1.0)
 pkg_check_modules(GRPC REQUIRED grpc>=4.0)
-
 link_directories(${GRPCPP_LIBRARY_DIRS} ${GRPC_LIBRARY_DIRS} ${PROTOBUF_LIBRARY_DIRS})
 include_directories(${GRPCPP_INCLUDE_DIRS} ${GRPC_INCLUDE_DIRS} ${PROTOBUF_INCLUDE_DIRS})
 
+
+# ... if set, enable code coverage builds for g++, and create a "test_coverage" target to collect the coverage using
+# lcov.  My attempts at using the gcovr cobertura output failed miserably, so I am sticking to what I know ...
 set(COVERAGE false CACHE BOOL "Enable code coverage builds.")
 if(${COVERAGE})
     include(cmake/CodeCoverage.cmake)
@@ -82,8 +84,28 @@ if(${COVERAGE})
     )
 endif(${COVERAGE})
 
+#
+# Generate C++ sources for the etcd proto files.  It is not a huge collection, but the directory hierarchy is very
+# finicky, see https://github.com/coryan/jaybeams/issues/158 for my rant on the subject.
+#
+include(cmake/CompileProtos.cmake)
+set(PROTOBUF_IMPORT_DIRS "${PROJECT_SOURCE_DIR}/ext/googleapis"
+        "${PROJECT_SOURCE_DIR}/ext/gogoproto"
+        "${PROJECT_SOURCE_DIR}/ext"
+        )
+PROTOBUF_GENERATE_CPP(PROTO_SOURCES PROTO_HDRS
+        ${PROJECT_SOURCE_DIR}/ext/googleapis/google/api/http.proto
+        ${PROJECT_SOURCE_DIR}/ext/googleapis/google/api/annotations.proto
+        ${PROJECT_SOURCE_DIR}/ext/gogoproto/gogoproto/gogo.proto
+        ${PROJECT_SOURCE_DIR}/ext/etcd/mvcc/mvccpb/kv.proto
+        ${PROJECT_SOURCE_DIR}/ext/etcd/auth/authpb/auth.proto
+        ${PROJECT_SOURCE_DIR}/ext/etcd/etcdserver/etcdserverpb/rpc.proto)
+GRPC_GENERATE_CPP(GRPCPP_SOURCES GRPCPP_HDRS ${PROJECT_SOURCE_DIR}/ext/etcd/etcdserver/etcdserverpb/rpc.proto)
+
 include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}")
 
+# Compile things into a shared library, apparently it is easy to instruct cmake(1) to generate a static library even
+# if we only describe how to create a shared lib.
 add_library(gee_h SHARED
         gh/assert_throw.hpp
         gh/assert_throw.cpp
@@ -103,9 +125,12 @@ add_library(gee_h SHARED
         gh/prefix_end.cpp
         gh/session_state.cpp
         gh/session_state.hpp
+        ${PROTO_SOURCES} ${PROTO_HDRS}
+        ${GRPCPP_SOURCES} ${GRPCPP_HEADERS}
     )
 target_link_libraries(gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
 
+# ... the unit tests, just the target name and the source code file, we use a foreach() to add dependencies ...
 add_executable(gh_assert_throw_ut gh/assert_throw_ut.cpp)
 add_executable(gh_completion_queue_ut gh/completion_queue_ut.cpp)
 add_executable(gh_detail_null_stream_ut gh/detail/null_stream_ut.cpp)
@@ -116,8 +141,8 @@ add_executable(gh_log_sink_ut  gh/log_sink_ut.cpp)
 add_executable(gh_prefix_end_ut gh/prefix_end_ut.cpp)
 add_executable(gh_session_state_ut gh/session_state_ut.cpp)
 
-# In cmake-3.7 we could use BUILDSYSTEM_TARGETS to get the list of all targets instead of manually maintaining the
-# list here:
+# ... in cmake-3.7 we could use BUILDSYSTEM_TARGETS to get the list of all targets. Unfortunately Ubuntu 16.04 ships
+# with cmake-3.5, so instead  ...
 set(all_unit_tests
         gh_assert_throw_ut
         gh_completion_queue_ut
@@ -130,7 +155,7 @@ set(all_unit_tests
         gh_session_state_ut
     )
 
-# Add the right libraries to all the unit tests, and also turn them into tests.
+# ... add the right libraries to all the unit tests, and also turn them into tests ...
 set(ut_sources)
 foreach(target ${all_unit_tests})
     get_target_property(tname ${target} NAME)
@@ -144,5 +169,6 @@ foreach(target ${all_unit_tests})
     endif()
 endforeach()
 
+# ... a giant executable with all the unit tests, this is convenient when using CLion ...
 add_executable(all_unit_tests ${ut_sources})
 target_link_libraries(all_unit_tests gee_h gmock gtest gtest_main)

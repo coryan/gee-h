@@ -1,3 +1,12 @@
 [submodule "ext/googletest"]
 	path = ext/googletest
 	url = https://github.com/google/googletest.git
+[submodule "ext/gogoproto"]
+	path = ext/gogoproto
+	url = https://github.com/gogo/protobuf.git
+[submodule "ext/googleapis"]
+	path = ext/googleapis
+	url = https://github.com/googleapis/googleapis.git
+[submodule "ext/etcd"]
+	path = ext/etcd
+	url = https://github.com/coreos/etcd.git
