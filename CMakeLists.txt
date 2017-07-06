@@ -87,7 +87,7 @@ include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}")
 add_library(gee_h SHARED
         gh/assert_throw.hpp
         gh/assert_throw.cpp
-        gh/detail/async_ops.hpp
+        gh/detail/base_async_op.hpp
         gh/detail/base_completion_queue.hpp
         gh/detail/base_completion_queue.cpp
         gh/detail/deadline_timer.hpp
