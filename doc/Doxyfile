@@ -6,7 +6,7 @@
 DOXYFILE_ENCODING      = UTF-8
 PROJECT_NAME           = Gee H
 PROJECT_NUMBER         = 0.0.1
-PROJECT_BRIEF          = "A C++11 Leader Election Client for etcd"
+PROJECT_BRIEF          = "A C++14 client library for etcd leader election"
 PROJECT_LOGO           =
 OUTPUT_DIRECTORY       = doc
 CREATE_SUBDIRS         = NO
