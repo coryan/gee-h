@@ -1,7 +1,6 @@
 #include "gh/log.hpp"
 
 #include <gmock/gmock.h>
-#include <gtest/gtest.h>
 
 /**
  * @test Verify that the GH_LOG_I() and the supporting classes all work in the normal case.
@@ -128,4 +127,24 @@ TEST(log, multiple_sinks) {
   ASSERT_EQ(logs[1].first, gh::severity::error);
   ASSERT_THAT(logs[0].second, StartsWith("[error] testing 123 42"));
   ASSERT_THAT(logs[1].second, StartsWith("(2) [error] testing 123 42"));
+}
+
+/**
+ * @test Complete code coverage for the gh::logger<true> class.
+ */
+TEST(log, logger_disabled) {
+  // In the normal operation of the gh::logger<true> class neither the get() nor the write_to() member functions are
+  // ever used, they are needed to make sure the code compiles.  We want to make sure the functions do behave
+  // "correctly", meaning they are no-op's:
+  gh::log lg;
+  std::vector<std::pair<gh::severity, std::string>> logs;
+  lg.add_sink(
+      gh::make_log_sink([&logs](gh::severity sev, std::string&& msg) { logs.emplace_back(sev, std::move(msg)); }));
+  gh::logger<true> logger(gh::severity::error, __func__, __FILE__, __LINE__, lg);
+
+  ASSERT_EQ((bool)logger, false);
+  ASSERT_NO_THROW(logger.get() << "testing " << 123 << std::string(" ") << 42);
+  ASSERT_TRUE((std::is_same<decltype(logger.get()), gh::detail::null_stream&>::value));
+  ASSERT_NO_THROW(logger.write_to(lg));
+  ASSERT_EQ(logs.size(), 0U);
 }

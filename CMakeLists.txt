@@ -133,8 +133,8 @@ target_link_libraries(gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIB
 # ... the unit tests, just the target name and the source code file, we use a foreach() to add dependencies ...
 add_executable(gh_assert_throw_ut gh/assert_throw_ut.cpp)
 add_executable(gh_completion_queue_ut gh/completion_queue_ut.cpp)
-add_executable(gh_detail_null_stream_ut gh/detail/null_stream_ut.cpp)
 add_executable(gh_detail_base_completion_queue_ut gh/detail/base_completion_queue_ut.cpp)
+add_executable(gh_detail_null_stream_ut gh/detail/null_stream_ut.cpp)
 add_executable(gh_log_ut gh/log_ut.cpp)
 add_executable(gh_log_severity_ut gh/log_severity_ut.cpp)
 add_executable(gh_log_sink_ut  gh/log_sink_ut.cpp)
