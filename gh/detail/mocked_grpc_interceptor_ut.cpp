@@ -35,13 +35,14 @@ TEST(mocked_grpc_interceptor, deadline_timer) {
 
   int cnt_ok = 0;
   int cnt_canceled = 0;
-  queue.make_relative_timer(100ms, "testing/relative_timer", [&cnt_ok, &cnt_canceled](auto& op, bool ok) {
+  auto handle_timer = [&cnt_ok, &cnt_canceled](auto& op, bool ok) {
     if (ok) {
       ++cnt_ok;
     } else {
       ++cnt_canceled;
     }
-  });
+  };
+  queue.make_relative_timer(100ms, "testing/relative_timer", handle_timer);
   ASSERT_EQ(pending_timer.size(), 1UL);
   ASSERT_EQ(cnt_ok, 0);
   ASSERT_EQ(cnt_canceled, 0);
@@ -51,13 +52,7 @@ TEST(mocked_grpc_interceptor, deadline_timer) {
   ASSERT_NO_THROW(pending_timer.pop_back());
 
   queue.make_deadline_timer(
-      std::chrono::system_clock::now() + 100ms, "testing/deadline_timer", [&cnt_ok, &cnt_canceled](auto& op, bool ok) {
-        if (ok) {
-          ++cnt_ok;
-        } else {
-          ++cnt_canceled;
-        }
-      });
+      std::chrono::system_clock::now() + 100ms, "testing/deadline_timer", handle_timer);
   ASSERT_EQ(pending_timer.size(), 1UL);
   ASSERT_EQ(cnt_ok, 1);
   ASSERT_EQ(cnt_canceled, 0);
