@@ -1,8 +1,8 @@
 #ifndef gh_completion_queue_hpp
 #define gh_completion_queue_hpp
 
-#include <gh/detail/base_completion_queue.hpp>
 #include <gh/detail/base_async_op.hpp>
+#include <gh/detail/base_completion_queue.hpp>
 #include <gh/detail/deadline_timer.hpp>
 #include <gh/detail/default_grpc_interceptor.hpp>
 
@@ -36,8 +36,7 @@ public:
   using grpc_interceptor_type = grpc_interceptor_t;
   //}
 
-  explicit completion_queue(
-      grpc_interceptor_type interceptor = grpc_interceptor_type())
+  explicit completion_queue(grpc_interceptor_type interceptor = grpc_interceptor_type())
       : detail::base_completion_queue()
       , interceptor_(std::move(interceptor)) {
   }
@@ -47,18 +46,20 @@ public:
       , interceptor_(std::move(interceptor)) {
   }
 
+  /// Return the configured interceptor, mostly used for mocking.
+  grpc_interceptor_type& interceptor() {
+    return interceptor_;
+  }
+
   /**
    * Call the functor when the deadline timer expires.
- *
- * Notice that system_clock is not guaranteed to be monotonic, which
- * makes it a poor choice in some cases.  gRPC is not dealing with
- * time intervals small enough to make a difference, so it is Okay,
- * I guess.
- */
+   *
+   * Notice that system_clock is not guaranteed to be monotonic, which makes it a poor choice in some cases.  gRPC is
+   * not dealing with time intervals small enough to make a difference, so it is Okay, I guess.
+   */
   template <typename Functor>
-  std::shared_ptr<detail::deadline_timer> make_deadline_timer(
-      std::chrono::system_clock::time_point deadline, std::string name,
-      Functor&& f) {
+  std::shared_ptr<detail::deadline_timer>
+  make_deadline_timer(std::chrono::system_clock::time_point deadline, std::string name, Functor&& f) {
     auto op = create_op<detail::deadline_timer>(std::move(name), std::move(f));
     void* tag = register_op("deadline_timer()", op);
     op->deadline = deadline;
@@ -68,8 +69,8 @@ public:
 
   /// Call the functor N units of time from now.
   template <typename duration_type, typename Functor>
-  std::shared_ptr<detail::deadline_timer> make_relative_timer(
-      duration_type duration, std::string name, Functor&& functor) {
+  std::shared_ptr<detail::deadline_timer>
+  make_relative_timer(duration_type duration, std::string name, Functor&& functor) {
     auto deadline = std::chrono::system_clock::now() + duration;
     return make_deadline_timer(deadline, std::move(name), std::move(functor));
   }
@@ -78,10 +79,6 @@ public:
   /// Return the underlying
   operator grpc::CompletionQueue*() {
     return cq();
-  }
-
-  grpc_interceptor_type& interceptor() {
-    return interceptor_;
   }
 
   /**
@@ -440,8 +437,7 @@ private:
   template <typename op_type, typename Functor>
   std::shared_ptr<op_type> create_op(std::string name, Functor&& f) const {
     auto op = std::make_shared<op_type>();
-    op->callback = [functor = std::move(f)](
-        detail::base_async_op & bop, bool ok) {
+    op->callback = [functor = std::move(f)](detail::base_async_op & bop, bool ok) {
       auto const& op = dynamic_cast<op_type const&>(bop);
       functor(op, ok);
     };
