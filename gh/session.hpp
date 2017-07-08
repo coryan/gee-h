@@ -18,7 +18,7 @@ public:
    * to release resources in etcd, such as the lease.  If the application wants to release the resources it should
    * call revoke() before destroying the object.
    */
-  ~session() noexcept(false);
+  virtual ~session() noexcept(false);
 
   /**
    * The session's lease.

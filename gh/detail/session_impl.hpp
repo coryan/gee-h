@@ -37,7 +37,7 @@ public:
       : session_impl(true, queue, std::move(lease_stub), convert_duration(desired_TTL), lease_id) {
   }
 
-  virtual ~session_impl() {
+  virtual ~session_impl() noexcept(false) override {
     shutdown();
   }
 
