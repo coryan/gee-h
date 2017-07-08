@@ -3,6 +3,7 @@
 
 #include <gh/detail/base_async_op.hpp>
 #include <gh/detail/deadline_timer.hpp>
+#include <gh/detail/stream_async_ops.hpp>
 
 #include <gmock/gmock.h>
 #include <grpc++/grpc++.h>
@@ -34,28 +35,23 @@ struct mocked_grpc_interceptor {
   /// Intercept creation of asynchronous rdwr RPC streams.
   template <typename C, typename M, typename op_type>
   void async_create_rdwr_stream(
-      C* async_client, M C::*call, std::shared_ptr<op_type> op,
-      grpc::CompletionQueue* cq, void* tag) {
+      C* async_client, M C::*call, std::shared_ptr<op_type> op, grpc::CompletionQueue* cq, void* tag) {
     shared_mock->async_create_rdwr_stream(op);
   }
 
-#if 0
   /// Intercept an asynchronous Write() operation over a rdwr RPC stream
   template <typename W, typename R, typename op_type>
-  void async_write(
-      async_rdwr_stream<W, R> const& stream, std::shared_ptr<op_type> op,
-      void* tag) {
+  void async_write(async_rdwr_stream<W, R> const& stream, std::shared_ptr<op_type> op, void* tag) {
     shared_mock->async_write(op);
   }
 
   /// Intercept an asynchronous Read() operation over a rdwr RPC stream
   template <typename W, typename R, typename op_type>
-  void async_read(
-      async_rdwr_stream<W, R> const& stream, std::shared_ptr<op_type> op,
-      void* tag) {
+  void async_read(async_rdwr_stream<W, R> const& stream, std::shared_ptr<op_type> op, void* tag) {
     shared_mock->async_read(op);
   }
 
+#if 0
   /// Intercept an asynchronous WriteDone() operation over a rdwr RPC stream
   template <typename W, typename R, typename op_type>
   void async_writes_done(
@@ -77,12 +73,11 @@ struct mocked_grpc_interceptor {
     MOCK_CONST_METHOD1(make_deadline_timer, void(std::shared_ptr<base_async_op> op));
     MOCK_CONST_METHOD1(async_rpc, void(std::shared_ptr<base_async_op> op));
     MOCK_CONST_METHOD1(async_create_rdwr_stream, void(std::shared_ptr<base_async_op> op));
-
-#if 0
     MOCK_CONST_METHOD1(async_write, void(std::shared_ptr<base_async_op> op));
     MOCK_CONST_METHOD1(async_read, void(std::shared_ptr<base_async_op> op));
-    MOCK_CONST_METHOD1(
-        async_writes_done, void(std::shared_ptr<base_async_op> op));
+
+#if 0
+    MOCK_CONST_METHOD1(async_writes_done, void(std::shared_ptr<base_async_op> op));
     MOCK_CONST_METHOD1(async_finish, void(std::shared_ptr<base_async_op> op));
 #endif // 0
   };

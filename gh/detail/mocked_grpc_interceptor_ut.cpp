@@ -245,8 +245,6 @@ TEST(mocked_grpc_interceptor, create_rdwr_stream_functor) {
   ASSERT_EQ(counter, 1);
 }
 
-#if 0
-
 /**
  * @test Verify Write() operations on rdwr RPC streams are intercepted.
  */
@@ -275,14 +273,14 @@ TEST(mocked_grpc_interceptor, rdwr_stream_write_functor) {
   int counter = 0;
   int* cnt = &counter;
   using stream_type =
-      detail::async_rdwr_stream<etcdserverpb::LeaseKeepAliveRequest, etcdserverpb::LeaseKeepAliveResponse>;
+  detail::async_rdwr_stream<etcdserverpb::LeaseKeepAliveRequest, etcdserverpb::LeaseKeepAliveResponse>;
   stream_type stream;
   etcdserverpb::LeaseKeepAliveRequest req;
   req.set_id(123456UL);
   queue.async_write(
       stream, std::move(req), "test/AsyncLeaseKeepAlive::Write/functor", [cnt](auto op, bool ok) { *cnt += int(ok); });
 
- ASSERT_EQ(counter, 1);
+  ASSERT_EQ(counter, 1);
 }
 
 /**
@@ -313,12 +311,14 @@ TEST(mocked_grpc_interceptor, rdwr_stream_read_functor) {
   int counter = 0;
   int* cnt = &counter;
   using stream_type =
-      detail::async_rdwr_stream<etcdserverpb::LeaseKeepAliveRequest, etcdserverpb::LeaseKeepAliveResponse>;
+  detail::async_rdwr_stream<etcdserverpb::LeaseKeepAliveRequest, etcdserverpb::LeaseKeepAliveResponse>;
   stream_type stream;
   queue.async_read(stream, "test/AsyncLeaseKeepAlive::Read/functor", [cnt](auto op, bool ok) { *cnt += int(ok); });
 
- ASSERT_EQ(counter, 1);
+  ASSERT_EQ(counter, 1);
 }
+
+#if 0
 
 /**
  * @test Verify WritesDone() operations on rdwr RPC streams are intercepted.

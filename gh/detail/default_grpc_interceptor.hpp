@@ -1,6 +1,7 @@
 #ifndef gh_detail_default_grpc_interceptor_hpp
 #define gh_detail_default_grpc_interceptor_hpp
 
+#include <gh/detail/stream_async_ops.hpp>
 #include <grpc++/grpc++.h>
 #include <memory>
 
@@ -38,7 +39,6 @@ struct default_grpc_interceptor {
     op->stream->client = (async_client->*call)(&op->stream->context, cq, tag);
   }
 
-#if 0
   /// Post an asynchronous Write() operation over a rdwr RPC stream
   template <typename W, typename R, typename op_type>
   void async_write(
@@ -55,6 +55,7 @@ struct default_grpc_interceptor {
     stream.client->Read(&op->response, tag);
   }
 
+#if 0
   /// Post an asynchronous WriteDone() operation over a rdwr RPC stream
   template <typename W, typename R, typename op_type>
   void async_writes_done(
