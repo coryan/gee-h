@@ -1,4 +1,4 @@
-#include "gh/detail/session_state.hpp"
+#include "gh/detail/session_state_machine.hpp"
 
 namespace gh {
 namespace detail {

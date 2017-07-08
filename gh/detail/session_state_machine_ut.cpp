@@ -1,25 +1,11 @@
-#include "gh/detail/session_state.hpp"
+#include "gh/detail/session_state_machine.hpp"
 
 #include <gtest/gtest.h>
 
 /**
  * @test Verify that the iostream operator for gh::session_state works as expected.
  */
-TEST(session_state, streaming) {
-  using s = gh::detail::session_state;
-  std::ostringstream os;
-  os << " " << s::constructing << " " << s::connecting << " " << s::connected << " " << s::obtaining_lease << " "
-     << s::lease_obtained << " " << s::waiting_for_timer << " " << s::waiting_for_keep_alive_read << " " << s::revoking
-     << " " << s::revoked << " " << s::shutting_down << " " << s::shutdown;
-  ASSERT_EQ(
-      os.str(), " constructing connecting connected obtaining_lease lease_obtained waiting_for_timer "
-                "waiting_for_keep_alive_read revoking revoked shutting_down shutdown");
-}
-
-/**
- * @test Verify that the iostream operator for gh::session_state works as expected.
- */
-TEST(session_state, state_machine) {
+TEST(session_state_machine, basic) {
   using s = gh::detail::session_state;
   gh::detail::session_state_machine machine;
 
@@ -49,4 +35,18 @@ TEST(session_state, state_machine) {
   ASSERT_FALSE(machine.change_state("test", s::revoking));
   ASSERT_FALSE(machine.change_state("test", s::revoked));
   ASSERT_TRUE(machine.change_state("test", s::shutdown));
+}
+
+/**
+ * @test Verify that the iostream operator for gh::session_state works as expected.
+ */
+TEST(session_state, streaming) {
+  using s = gh::detail::session_state;
+  std::ostringstream os;
+  os << " " << s::constructing << " " << s::connecting << " " << s::connected << " " << s::obtaining_lease << " "
+     << s::lease_obtained << " " << s::waiting_for_timer << " " << s::waiting_for_keep_alive_read << " " << s::revoking
+     << " " << s::revoked << " " << s::shutting_down << " " << s::shutdown;
+  ASSERT_EQ(
+      os.str(), " constructing connecting connected obtaining_lease lease_obtained waiting_for_timer "
+      "waiting_for_keep_alive_read revoking revoked shutting_down shutdown");
 }

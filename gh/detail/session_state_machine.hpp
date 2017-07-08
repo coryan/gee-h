@@ -1,5 +1,5 @@
-#ifndef gh_detail_session_state_hpp
-#define gh_detail_session_state_hpp
+#ifndef gh_detail_session_state_machine_hpp
+#define gh_detail_session_state_machine_hpp
 
 #include <iostream>
 #include <mutex>
@@ -86,4 +86,4 @@ private:
 } // namespace detail
 } // namespace gh
 
-#endif // gh_detail_session_state_hpp
+#endif // gh_detail_session_state_machine_hpp
