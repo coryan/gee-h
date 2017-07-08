@@ -7,36 +7,36 @@ matrix:
   include:
     - os: linux
       compiler: clang
-      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 CXX_COMPILER=/usr/bin/clang++
+      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04
     - os: linux
       compiler: clang
-      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04 CXX_COMPILER=/usr/bin/clang++ \
+      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04 \
            CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Debug"
     - os: linux
       compiler: clang
-      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=24 CXX_COMPILER=/usr/bin/clang++ \
+      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=24 \
            CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Debug"
     - os: linux
       compiler: clang
-      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=25 CXX_COMPILER=/usr/bin/clang++
+      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=25
     - os: linux
       compiler: gcc
-      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 CXX_COMPILER=/usr/bin/g++ \
+      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 \
            CMAKE_FLAGS="-DCOVERAGE:BOOL=true -DCMAKE_BUILD_TYPE=Debug" BUILD_EXTRA=COVERAGE
     - os: linux
       compiler: gcc
-      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04 CXX_COMPILER=/usr/bin/g++
+      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04
     - os: linux
       compiler: gcc
-      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=24 CXX_COMPILER=/usr/bin/g++
+      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=24
     - os: linux
       compiler: gcc
-      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=25 CXX_COMPILER=/usr/bin/g++
+      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=25
 
 script:
   - if [ "${DOCKER_BUILD?}" = "yes" ]; then
       IMAGE="cached-${DISTRO?}-${DISTRO_VERSION?}";
-      latest_id=$(sudo docker inspect -f '{{ .Id }}' ${IMAGE?}:latest)
+      latest_id=$(sudo docker inspect -f '{{ .Id }}' ${IMAGE?}:latest >/dev/null || echo "");
       cacheargs="";
       if [ "x${latest_id}" != "x" ]; then
         cacheargs="--cache-from ${IMAGE?}:latest";
@@ -46,7 +46,8 @@ script:
       echo IMAGE LATEST ID = $latest_id;
       sudo docker build -t ${IMAGE?}:tip ${cacheargs?}
           --build-arg DISTRO_VERSION=${DISTRO_VERSION?}
-          --build-arg CXX_COMPILER=${CXX_COMPILER?}
+          --build-arg CXX=${CXX?}
+          --build-arg CC=${CC?}
           --build-arg CMAKE_FLAGS="${CMAKE_FLAGS}"
           --build-arg BUILD_EXTRA=${BUILD_EXTRA}
           --build-arg TRAVIS_JOB_NUMBER=${TRAVIS_JOB_NUMBER}

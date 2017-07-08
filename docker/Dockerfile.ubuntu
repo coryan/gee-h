@@ -42,6 +42,8 @@ RUN apt-get update && \
     lsb-release \
     make \
     pkg-config \
+    python \
+    shtool \
     wget && \
   apt-get clean
 
@@ -61,7 +63,8 @@ RUN wget -q https://github.com/coreos/etcd/releases/download/v3.2.1/etcd-v3.2.1-
   /bin/rm -fr /var/tmp/install-etcd
 
 # ... capture the arguments that control the build ...
-ARG CXX_COMPILER=clang++
+ARG CXX=clang++
+ARG CC=clang
 ARG CMAKE_FLAGS=""
 ARG BUILD_EXTRA=""
 
@@ -80,4 +83,6 @@ COPY cmake /var/tmp/build-gee-h/cmake
 # ... build inside a sub-directory, easier to copy the artifacts that way
 WORKDIR /var/tmp/build-gee-h/build
 # ... run the configure / compile / test cycle ...
-RUN cmake -DCMAKE_CXX_COMPILER=${CXX_COMPILER} ${CMAKE_FLAGS} .. && make -j 2 && make test
+RUN cmake ${CMAKE_FLAGS} .. && make -j 2
+RUN make -j 2 test || cat Testing/Temporary/LastTest.log
+
