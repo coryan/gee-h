@@ -49,6 +49,14 @@ RUN (git clone --depth 10 https://github.com/grpc/grpc.git && \
     cd third_party/protobuf && make install && \
     echo /usr/local/lib >/etc/ld.so.conf.d/local.conf && ldconfig)
 
+# ... install etcd and etcdctl in /usr/bin, they are used in the integration tests ...
+WORKDIR /var/tmp/install-etcd
+RUN wget -q https://github.com/coreos/etcd/releases/download/v3.2.1/etcd-v3.2.1-linux-amd64.tar.gz && \
+  tar -xf etcd-v3.2.1-linux-amd64.tar.gz && \
+  cp etcd-v3.2.1-linux-amd64/etcd /usr/bin && \
+  cp etcd-v3.2.1-linux-amd64/etcdctl /usr/bin && \
+  /bin/rm -fr /var/tmp/install-etcd
+
 # ... by default, Fedora does not look for packages in /usr/local/lib/pkgconfig ...
 # ... capture the arguments that control the build ...
 ARG CXX_COMPILER=clang++

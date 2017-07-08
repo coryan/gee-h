@@ -111,6 +111,7 @@ add_library(gee_h SHARED
         gh/active_completion_queue.cpp
         gh/assert_throw.hpp
         gh/assert_throw.cpp
+        gh/detail/async_rpc_op.hpp
         gh/detail/base_async_op.hpp
         gh/detail/base_completion_queue.hpp
         gh/detail/base_completion_queue.cpp
@@ -167,7 +168,6 @@ foreach(target ${all_unit_tests})
     if(is_ut)
         string(REGEX REPLACE "^gh_detail_" "gh/detail/" fname0 ${target})
         string(REGEX REPLACE "^gh_" "gh/" fname ${fname0})
-        message("target fname " ${target} ${fname})
         add_executable(${target} ${fname})
         get_target_property(tname ${target} NAME)
         target_link_libraries(${target} gmock gtest gtest_main gee_h grpc++ grpc protobuf)
@@ -184,3 +184,7 @@ target_link_libraries(all_unit_tests gee_h gmock gtest gtest_main)
 # ... an integration test, using the unit test framework to report results ...
 add_executable(gh_session_test gh/session_test.cpp)
 target_link_libraries(gh_session_test gee_h gmock gtest gtest_main)
+
+add_test(NAME gh_integration_tests
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/gh/integration_tests.py
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})

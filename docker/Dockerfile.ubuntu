@@ -41,7 +41,8 @@ RUN apt-get update && \
     libtool \
     lsb-release \
     make \
-    pkg-config && \
+    pkg-config \
+    wget && \
   apt-get clean
 
 # ... compile and install gRPC++ and Protobuf v3 ...
@@ -50,6 +51,14 @@ RUN (git clone --depth 10 https://github.com/grpc/grpc.git && \
     cd grpc && git pull && git submodule update --init && \
     make -j 2 && make install && \
     cd third_party/protobuf && make install)
+
+# ... install etcd and etcdctl in /usr/bin, they are used in the integration tests ...
+WORKDIR /var/tmp/install-etcd
+RUN wget -q https://github.com/coreos/etcd/releases/download/v3.2.1/etcd-v3.2.1-linux-amd64.tar.gz && \
+  tar -xf etcd-v3.2.1-linux-amd64.tar.gz && \
+  cp etcd-v3.2.1-linux-amd64/etcd /usr/bin && \
+  cp etcd-v3.2.1-linux-amd64/etcdctl /usr/bin && \
+  /bin/rm -fr /var/tmp/install-etcd
 
 # ... capture the arguments that control the build ...
 ARG CXX_COMPILER=clang++
