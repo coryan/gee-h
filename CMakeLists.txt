@@ -114,6 +114,10 @@ add_library(gee_h SHARED
         gh/detail/base_completion_queue.cpp
         gh/detail/deadline_timer.hpp
         gh/detail/default_grpc_interceptor.hpp
+        gh/detail/grpc_errors.hpp
+        gh/detail/grpc_errors.cpp
+        gh/detail/grpc_errors.cpp
+        gh/detail/grpc_errors_annotations.hpp
         gh/detail/mocked_grpc_interceptor.hpp
         gh/detail/null_stream.hpp
         gh/detail/stream_async_ops.hpp
@@ -136,6 +140,7 @@ target_link_libraries(gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIB
 add_executable(gh_assert_throw_ut gh/assert_throw_ut.cpp)
 add_executable(gh_completion_queue_ut gh/completion_queue_ut.cpp)
 add_executable(gh_detail_base_completion_queue_ut gh/detail/base_completion_queue_ut.cpp)
+add_executable(gh_detail_grpc_errors_ut gh/detail/grpc_errors_ut.cpp)
 add_executable(gh_detail_mocked_grpc_interceptor_ut gh/detail/mocked_grpc_interceptor_ut.cpp)
 add_executable(gh_detail_null_stream_ut gh/detail/null_stream_ut.cpp)
 add_executable(gh_detail_session_state_ut gh/detail/session_state_machine_ut.cpp)
@@ -150,6 +155,7 @@ set(all_unit_tests
         gh_assert_throw_ut
         gh_completion_queue_ut
         gh_detail_base_completion_queue_ut
+        gh_detail_grpc_errors_ut
         gh_detail_mocked_grpc_interceptor_ut
         gh_detail_null_stream_ut
         gh_detail_session_state_ut
