@@ -1,7 +1,7 @@
 #include "gh/detail/mocked_grpc_interceptor.hpp"
 #include <gh/completion_queue.hpp>
 
-#include <gmock/gmock.h>
+#include <etcd/etcdserver/etcdserverpb/rpc.grpc.pb.h>
 
 /**
  * @test Verify that we can mock timers using gh::detail::mocked_grpc_interceptor.
@@ -51,8 +51,7 @@ TEST(mocked_grpc_interceptor, deadline_timer) {
   ASSERT_EQ(cnt_canceled, 0);
   ASSERT_NO_THROW(pending_timer.pop_back());
 
-  queue.make_deadline_timer(
-      std::chrono::system_clock::now() + 100ms, "testing/deadline_timer", handle_timer);
+  queue.make_deadline_timer(std::chrono::system_clock::now() + 100ms, "testing/deadline_timer", handle_timer);
   ASSERT_EQ(pending_timer.size(), 1UL);
   ASSERT_EQ(cnt_ok, 1);
   ASSERT_EQ(cnt_canceled, 0);
@@ -62,11 +61,10 @@ TEST(mocked_grpc_interceptor, deadline_timer) {
   ASSERT_NO_THROW(pending_timer.pop_back());
 }
 
-#if 0
 /**
  * @test Make sure we can mock async_rpc() calls a completion_queue.
  */
-TEST(mocked_grpc_interceptor, rpc) {
+TEST(mocked_grpc_interceptor, async_rpc) {
   using namespace std::chrono_literals;
 
   // Create a null lease object, we do not need (or want) a real
@@ -93,23 +91,22 @@ TEST(mocked_grpc_interceptor, rpc) {
   req.set_ttl(5); // in seconds
   req.set_id(0);  // let the server pick the lease_id
   auto fut = queue.async_rpc(
-      lease.get(), &etcdserverpb::Lease::Stub::AsyncLeaseGrant, std::move(req), "test/Lease/future",
-      gh::use_future());
+      lease.get(), &etcdserverpb::Lease::Stub::AsyncLeaseGrant, std::move(req), "test/Lease/future", gh::use_future());
 
   // ... verify the results are not there, the interceptor should have
   // stopped the call from going out ...
   auto wait_response = fut.wait_for(10ms);
- ASSERT_EQ(wait_response, std::future_status::timeout);
+  ASSERT_EQ(wait_response, std::future_status::timeout);
 
   // ... we need to fill the response parameters, which again could be
   // done in the mock action, but we are delaying the operations to
   // verify the std::promise is not immediately satisfied ...
-  BOOST_REQUIRE((bool)last_op);
+  ASSERT_TRUE((bool)last_op);
   {
     auto op =
-        dynamic_cast<gh::detail::async_op<etcdserverpb::LeaseGrantRequest, etcdserverpb::LeaseGrantResponse>*>(
+        dynamic_cast<gh::detail::async_rpc_op<etcdserverpb::LeaseGrantRequest, etcdserverpb::LeaseGrantResponse>*>(
             last_op.get());
-    BOOST_CHECK(op != nullptr);
+    ASSERT_TRUE(op != nullptr);
     op->response.set_ttl(7);
     op->response.set_id(123456UL);
   }
@@ -118,12 +115,12 @@ TEST(mocked_grpc_interceptor, rpc) {
 
   // ... that must make the result read or we will get a deadlock ...
   wait_response = fut.wait_for(10ms);
-  BOOST_REQUIRE_EQUAL(wait_response, std::future_status::ready);
+  ASSERT_EQ(wait_response, std::future_status::ready);
 
   // ... get the response ...
   auto response = fut.get();
- ASSERT_EQ(response.ttl(), 7);
- ASSERT_EQ(response.id(), 123456UL);
+  ASSERT_EQ(response.ttl(), 7);
+  ASSERT_EQ(response.id(), 123456);
 }
 
 /**
@@ -159,11 +156,13 @@ TEST(mocked_grpc_interceptor, rpc_cancelled) {
       gh::use_future());
 
   // ... check that the operation was immediately cancelled ...
-  BOOST_REQUIRE_EQUAL(fut.wait_for(0ms), std::future_status::ready);
+  ASSERT_EQ(fut.wait_for(0ms), std::future_status::ready);
 
   // ... and the promise was satisfied with an exception ...
-  BOOST_CHECK_THROW(fut.get(), std::exception);
+  ASSERT_THROW(fut.get(), std::exception);
 }
+
+#if 0
 
 /**
  * @test Verify creation of rdwr RPC streams is intercepted.

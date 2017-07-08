@@ -21,20 +21,17 @@ struct mocked_grpc_interceptor {
 
   /// Post a timer
   template <typename op_type>
-  void make_deadline_timer(
-      std::shared_ptr<op_type> op, grpc::CompletionQueue* cq, void* tag) {
+  void make_deadline_timer(std::shared_ptr<op_type> op, grpc::CompletionQueue* cq, void* tag) {
     shared_mock->make_deadline_timer(op);
   }
 
-#if 0
   /// Intercept posting of asynchronous RPC operations
   template <typename C, typename M, typename op_type>
-  void async_rpc(
-      C* async_client, M C::*call, std::shared_ptr<op_type> op,
-      grpc::CompletionQueue* cq, void* tag) {
+  void async_rpc(C* async_client, M C::*call, std::shared_ptr<op_type> op, grpc::CompletionQueue* cq, void* tag) {
     shared_mock->async_rpc(op);
   }
 
+#if 0
   /// Intercept creation of asynchronous rdwr RPC streams.
   template <typename C, typename M, typename op_type>
   void async_create_rdwr_stream(
@@ -77,10 +74,10 @@ struct mocked_grpc_interceptor {
 #endif // 0
 
   struct mocked {
-    MOCK_CONST_METHOD1(
-        make_deadline_timer, void(std::shared_ptr<base_async_op> op));
-#if 0
+    MOCK_CONST_METHOD1(make_deadline_timer, void(std::shared_ptr<base_async_op> op));
     MOCK_CONST_METHOD1(async_rpc, void(std::shared_ptr<base_async_op> op));
+
+#if 0
     MOCK_CONST_METHOD1(
         async_create_rdwr_stream, void(std::shared_ptr<base_async_op> op));
     MOCK_CONST_METHOD1(async_write, void(std::shared_ptr<base_async_op> op));

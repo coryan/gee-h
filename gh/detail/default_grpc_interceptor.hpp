@@ -21,7 +21,6 @@ struct default_grpc_interceptor {
     op->alarm_ = std::make_unique<grpc::Alarm>(cq, op->deadline, tag);
   }
 
-#if 0
   /// Post an asynchronous RPC operation via the completion queue
   template <typename C, typename M, typename op_type>
   void async_rpc(
@@ -31,6 +30,7 @@ struct default_grpc_interceptor {
     op->rpc->Finish(&op->response, &op->status, tag);
   }
 
+#if 0
   /// Post an asynchronous operation to create a rdwr RPC stream
   template <typename C, typename M, typename op_type>
   void async_create_rdwr_stream(

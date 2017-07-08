@@ -1,7 +1,7 @@
 #ifndef gh_completion_queue_hpp
 #define gh_completion_queue_hpp
 
-#include <gh/detail/base_async_op.hpp>
+#include <gh/detail/async_rpc_op.hpp>
 #include <gh/detail/base_completion_queue.hpp>
 #include <gh/detail/deadline_timer.hpp>
 #include <gh/detail/default_grpc_interceptor.hpp>
@@ -75,12 +75,6 @@ public:
     return make_deadline_timer(deadline, std::move(name), std::move(functor));
   }
 
-#if 0
-  /// Return the underlying
-  operator grpc::CompletionQueue*() {
-    return cq();
-  }
-
   /**
    * Start an asynchronous RPC call and invoke a functor with the results.
    *
@@ -116,7 +110,7 @@ public:
   template <typename C, typename M, typename W, typename Functor>
   void async_rpc(
       C* async_client, M C::*call, W&& request, std::string name, Functor&& f) {
-    using requirements = detail::async_op_requirements<M>;
+    using requirements = detail::async_rpc_op_requirements<M>;
     static_assert(
         requirements::matches::value,
         "The member function signature does not match: "
@@ -128,7 +122,7 @@ public:
         std::is_same<W, request_type>::value,
         "Mismatch request parameter type vs. operation signature");
 
-    using op_type = detail::async_op<request_type, response_type>;
+    using op_type = detail::async_rpc_op<request_type, response_type>;
     auto op = create_op<op_type>(std::move(name), std::move(f));
     void* tag = register_op("async_rpc()", op);
     op->request.Swap(&request);
@@ -178,11 +172,11 @@ public:
    * std::shared_future<ResponseType>.
    */
   template <typename C, typename M, typename W>
-  std::shared_future<typename detail::async_op_requirements<M>::response_type>
+  std::shared_future<typename detail::async_rpc_op_requirements<M>::response_type>
   async_rpc(
       C* async_client, M C::*call, W&& request, std::string name, use_future) {
     auto promise = std::make_shared<std::promise<
-        typename detail::async_op_requirements<M>::response_type>>();
+        typename detail::async_rpc_op_requirements<M>::response_type>>();
     this->async_rpc(
         async_client, call, std::move(request), std::move(name),
         [promise](auto& op, bool ok) {
@@ -200,6 +194,7 @@ public:
     return promise->get_future().share();
   }
 
+#if 0
   /**
    * Create a new asynchronous read-write stream and call the functor
    * when it is constructed and ready.
