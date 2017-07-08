@@ -34,7 +34,7 @@ matrix:
       env: LINUX_BUILD=yes DISTRO=fedora DISTRO_VERSION=25
 
 script:
-  - ci/linux-build.sh
+  - ci/build-linux.sh
 
 after_success:
   - ci/upload-coverage.sh
