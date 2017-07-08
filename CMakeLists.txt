@@ -117,6 +117,9 @@ add_library(gee_h SHARED
         gh/detail/mocked_grpc_interceptor.hpp
         gh/detail/null_stream.hpp
         gh/detail/stream_async_ops.hpp
+        gh/detail/session_impl.hpp
+        gh/detail/session_state.cpp
+        gh/detail/session_state.hpp
         gh/completion_queue.hpp
         gh/log.hpp
         gh/log.cpp
@@ -125,8 +128,6 @@ add_library(gee_h SHARED
         gh/log_sink.hpp
         gh/prefix_end.hpp
         gh/prefix_end.cpp
-        gh/session_state.cpp
-        gh/session_state.hpp
         ${PROTO_SOURCES} ${PROTO_HDRS}
         ${GRPCPP_SOURCES} ${GRPCPP_HEADERS}
     )
@@ -138,11 +139,11 @@ add_executable(gh_completion_queue_ut gh/completion_queue_ut.cpp)
 add_executable(gh_detail_base_completion_queue_ut gh/detail/base_completion_queue_ut.cpp)
 add_executable(gh_detail_mocked_grpc_interceptor_ut gh/detail/mocked_grpc_interceptor_ut.cpp)
 add_executable(gh_detail_null_stream_ut gh/detail/null_stream_ut.cpp)
+add_executable(gh_detail_session_state_ut gh/detail/session_state_ut.cpp)
 add_executable(gh_log_ut gh/log_ut.cpp)
 add_executable(gh_log_severity_ut gh/log_severity_ut.cpp)
 add_executable(gh_log_sink_ut  gh/log_sink_ut.cpp)
 add_executable(gh_prefix_end_ut gh/prefix_end_ut.cpp)
-add_executable(gh_session_state_ut gh/session_state_ut.cpp)
 
 # ... in cmake-3.7 we could use BUILDSYSTEM_TARGETS to get the list of all targets. Unfortunately Ubuntu 16.04 ships
 # with cmake-3.5, so instead  ...
@@ -152,11 +153,11 @@ set(all_unit_tests
         gh_detail_base_completion_queue_ut
         gh_detail_mocked_grpc_interceptor_ut
         gh_detail_null_stream_ut
+        gh_detail_session_state_ut
         gh_log_ut
         gh_log_severity_ut
         gh_log_sink_ut
         gh_prefix_end_ut
-        gh_session_state_ut
     )
 
 # ... add the right libraries to all the unit tests, and also turn them into tests ...
