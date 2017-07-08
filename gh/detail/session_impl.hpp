@@ -50,13 +50,12 @@ public:
     // really there is no reason to.  This is running in the session's
     // thread, and there is no more use for the completion queue, no
     // pending operations or anything ...
-    grpc::ClientContext context;
     etcdserverpb::LeaseRevokeRequest req;
     req.set_id(lease_id_);
-    etcdserverpb::LeaseRevokeResponse resp;
-    auto status = lease_client_->LeaseRevoke(&context, req, &resp);
-    check_grpc_status(
-        status, "session::LeaseRevoke()", " lease_id=", lease_id(), ", response=", print_to_stream(resp));
+    auto lfut = queue_.async_rpc(
+        lease_client_.get(), &etcdserverpb::Lease::Stub::AsyncLeaseRevoke, std::move(req),
+        "session/revoke/lease_revoke", gh::use_future());
+    auto resp = lfut.get();
     GH_LOG(trace) << std::hex << lease_id() << " lease Revoked";
     state_machine_.change_state("revoke()", session_state::revoked);
   }

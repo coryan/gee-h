@@ -11,10 +11,9 @@ void prepare_mocks_common(completion_queue_type& queue);
 } // anonymous namespace
 
 /**
- * @test Verify that gh::detail::session_impl works in the
- * simple case.
+ * @test Verify that gh::detail::session_impl works in the simple case.
  */
-TEST(session, session_basic) {
+TEST(session_impl, basic) {
   using namespace std::chrono_literals;
   using namespace gh::detail;
 
@@ -62,10 +61,9 @@ TEST(session, session_basic) {
 }
 
 /**
- * @test Verify that gh::detail::session_impl works when the
- * lease fails to be acquired.
+ * @test Verify that gh::detail::session_impl works when the lease fails to be acquired.
  */
-TEST(session, session_lease_error) {
+TEST(session_impl, lease_error) {
   using namespace std::chrono_literals;
   using namespace gh::detail;
 
@@ -107,7 +105,7 @@ TEST(session, session_lease_error) {
  * @test Verify that gh::detail::session_impl works when the
  * lease fails to be acquired.
  */
-TEST(session, session_lease_unusual_exception) {
+TEST(session_impl, lease_unusual_exception) {
   using namespace std::chrono_literals;
   using namespace gh::detail;
 
@@ -132,6 +130,101 @@ TEST(session, session_lease_unusual_exception) {
       std::string);
 }
 
+/**
+ * @test Verify that gh::detail::session_impl works for a full lifecycle (create, get lease, some keep alive, revoke).
+ */
+TEST(session_impl, full_lifecycle) {
+  using namespace std::chrono_literals;
+  using namespace gh::detail;
+
+  completion_queue_type queue;
+  prepare_mocks_common(queue);
+  using namespace ::testing;
+  // ... we expect a call to request a lease ...
+  EXPECT_CALL(*queue.interceptor().shared_mock, async_rpc(Truly([](auto op) {
+    return op->name == "session/preamble/lease_grant";
+  }))).WillOnce(Invoke([](auto bop) {
+    using op_type = gh::detail::async_rpc_op<etcdserverpb::LeaseGrantRequest, etcdserverpb::LeaseGrantResponse>;
+    auto* op = dynamic_cast<op_type*>(bop.get());
+    ASSERT_TRUE(op != nullptr);
+    // ... verify the request is what we expect ...
+    EXPECT_EQ(op->request.ttl(), 5);
+    EXPECT_EQ(op->request.id(), 0);
+
+    // ... in this test we just assume everything worked, so provide a response ...
+    op->response.set_error("");
+    op->response.set_id(1000);
+    op->response.set_ttl(42);
+    // ... and to not forget the callback ...
+    bop->callback(*bop, true);
+  }));
+
+  // ... and a call to setup a timer ...
+  std::shared_ptr<deadline_timer> pending_timer;
+  auto handle_timer = [r = std::ref(pending_timer)](auto bop) {
+    using op_type = gh::detail::deadline_timer;
+    auto* op = dynamic_cast<op_type*>(bop.get());
+    ASSERT_TRUE(op != nullptr);
+    // ... the standard trick to downcast shared_ptr<> ...
+    r.get() = std::shared_ptr<deadline_timer>(bop, op);
+  };
+  EXPECT_CALL(*queue.interceptor().shared_mock, make_deadline_timer(Truly([](auto op) {
+    return op->name == "session/set_timer/ttl_refresh";
+  }))).WillRepeatedly(Invoke(handle_timer));
+
+  EXPECT_CALL(*queue.interceptor().shared_mock, async_write(Truly([](auto op) {
+    return op->name == "session/on_timeout/write";
+  }))).WillRepeatedly(Invoke([](auto bop) {
+    using op_type = gh::detail::write_op<etcdserverpb::LeaseKeepAliveRequest>;
+    auto* op = dynamic_cast<op_type*>(bop.get());
+    ASSERT_TRUE(op != nullptr);
+    // ... verify the request is what we expect ...
+    EXPECT_EQ(op->request.id(), 1000);
+
+    // ... and to not forget the callback ...
+    bop->callback(*bop, true);
+  }));
+
+  EXPECT_CALL(*queue.interceptor().shared_mock, async_read(Truly([](auto op) {
+    return op->name == "session/on_write/read";
+  }))).WillRepeatedly(Invoke([](auto bop) {
+    using op_type = gh::detail::read_op<etcdserverpb::LeaseKeepAliveResponse>;
+    auto* op = dynamic_cast<op_type*>(bop.get());
+    ASSERT_TRUE(op != nullptr);
+
+    // ... provide a response value
+    op->response.set_ttl(24);
+    // ... and to not forget the callback ...
+    bop->callback(*bop, true);
+  }));
+
+  auto session = std::make_unique<session_type>(queue, std::unique_ptr<etcdserverpb::Lease::Stub>(), 5000ms);
+  EXPECT_EQ(session->lease_id(), 1000UL);
+  EXPECT_EQ(session->actual_TTL().count(), 42000);
+  ASSERT_TRUE(session->is_active());
+
+  // ... reset the timer to verify it is setup again after the timer -> write -> read cycle ...
+  auto p = std::move(pending_timer);
+  ASSERT_FALSE((bool)pending_timer);
+  p->callback(*p, true);
+  // ... once a complete timer -> write -> read cycle goes through we expect the TTL to change (see the mock
+  // expectation setup above) ...
+  EXPECT_EQ(session->actual_TTL().count(), 24000);
+  ASSERT_TRUE((bool)pending_timer);
+  p = std::move(pending_timer);
+  p->callback(*p, true);
+  EXPECT_EQ(session->actual_TTL().count(), 24000);
+  ASSERT_TRUE((bool)pending_timer);
+
+  // ... we should still be connected ...
+  ASSERT_TRUE(session->is_active());
+
+  // ... okay, after two cycles let's revoke the lease ...
+  session->revoke();
+  ASSERT_FALSE(session->is_active());
+
+  EXPECT_NO_THROW(session.reset(nullptr));
+}
 
 namespace {
 void prepare_mocks_common(completion_queue_type& queue) {
