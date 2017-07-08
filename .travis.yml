@@ -7,52 +7,34 @@ matrix:
   include:
     - os: linux
       compiler: clang
-      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04
+      env: LINUX_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04
     - os: linux
       compiler: clang
-      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04 \
+      env: LINUX_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04 \
            CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Debug"
     - os: linux
       compiler: clang
-      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=24 \
+      env: LINUX_BUILD=yes DISTRO=fedora DISTRO_VERSION=24 \
            CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Debug"
     - os: linux
       compiler: clang
-      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=25
+      env: LINUX_BUILD=yes DISTRO=fedora DISTRO_VERSION=25
     - os: linux
       compiler: gcc
-      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 \
+      env: LINUX_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 \
            CMAKE_FLAGS="-DCOVERAGE:BOOL=true -DCMAKE_BUILD_TYPE=Debug" BUILD_EXTRA=COVERAGE
     - os: linux
       compiler: gcc
-      env: DOCKER_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04
+      env: LINUX_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04
     - os: linux
       compiler: gcc
-      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=24
+      env: LINUX_BUILD=yes DISTRO=fedora DISTRO_VERSION=24
     - os: linux
       compiler: gcc
-      env: DOCKER_BUILD=yes DISTRO=fedora DISTRO_VERSION=25
+      env: LINUX_BUILD=yes DISTRO=fedora DISTRO_VERSION=25
 
 script:
-  - if [ "${DOCKER_BUILD?}" = "yes" ]; then
-      IMAGE="cached-${DISTRO?}-${DISTRO_VERSION?}";
-      latest_id=$(sudo docker inspect -f '{{ .Id }}' ${IMAGE?}:latest >/dev/null || echo "");
-      cacheargs="";
-      if [ "x${latest_id}" != "x" ]; then
-        cacheargs="--cache-from ${IMAGE?}:latest";
-      fi;
-      echo cache args = $cacheargs;
-      echo IMAGE = $IMAGE;
-      echo IMAGE LATEST ID = $latest_id;
-      sudo docker build -t ${IMAGE?}:tip ${cacheargs?}
-          --build-arg DISTRO_VERSION=${DISTRO_VERSION?}
-          --build-arg CXX=${CXX?}
-          --build-arg CC=${CC?}
-          --build-arg CMAKE_FLAGS="${CMAKE_FLAGS}"
-          --build-arg BUILD_EXTRA=${BUILD_EXTRA}
-          --build-arg TRAVIS_JOB_NUMBER=${TRAVIS_JOB_NUMBER}
-          -f docker/Dockerfile.${DISTRO?} .;
-    fi
+  - ci/linux-build.sh
 
 after_success:
   - ci/upload-coverage.sh
@@ -73,34 +55,10 @@ cache:
     - docker-images/fedora/25
 
 install:
-  # Update docker, the default version installed in Travis is 17.04,
-  # just shy of what we need (17.06).
-  - sudo apt-get update
-  - sudo apt-get install -y docker-ce
-  - sudo docker --version
-  # Restore the docker image from the cached directory.  That way we
-  # can reuse the steps in the docker image that install
-  # pre-requisites and build dependencies ...
-  - TARBALL=docker-images/${DISTRO?}/${DISTRO_VERSION?}/saved.tar.gz;
-    if [ "${DOCKER_BUILD?}" = "yes" -a -f ${TARBALL?} ]; then
-      gunzip <${TARBALL?} | sudo docker load ||
-        echo "Could not load saved image, continue without cache";
-    fi
-  # Some debugging ...
-  - ls -l || /bin/true
-  - ls -l docker-images || /bin/true
-  - ls -l docker-images/${DISTRO} || /bin/true
-  - ls -l docker-images/${DISTRO}/${DISTRO_VERSION} || /bin/true
-  - sudo docker image ls
+  - ci/install-linux.sh
 
 before_cache:
-  # Save the docker image back to the tarball
-  - IMAGE=cached-${DISTRO?}-${DISTRO_VERSION?};
-    TARBALL=docker-images/${DISTRO?}/${DISTRO_VERSION?}/saved.tar.gz;
-    if [ "${DOCKER_BUILD?}" = "yes" ]; then
-      sudo docker image tag ${IMAGE?}:tip ${IMAGE?}:latest ;
-      sudo docker save ${IMAGE?}:latest | gzip - > ${TARBALL?};
-    fi
+  - ci/cache-linux.sh
 
 notifications:
   email: false
