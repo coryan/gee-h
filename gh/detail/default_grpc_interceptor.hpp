@@ -55,7 +55,6 @@ struct default_grpc_interceptor {
     stream.client->Read(&op->response, tag);
   }
 
-#if 0
   /// Post an asynchronous WriteDone() operation over a rdwr RPC stream
   template <typename W, typename R, typename op_type>
   void async_writes_done(
@@ -71,7 +70,6 @@ struct default_grpc_interceptor {
       void* tag) {
     stream.client->Finish(&op->status, tag);
   }
-#endif /* 0 */
 };
 
 } // namespace detail

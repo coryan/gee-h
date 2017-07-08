@@ -318,7 +318,6 @@ TEST(mocked_grpc_interceptor, rdwr_stream_read_functor) {
   ASSERT_EQ(counter, 1);
 }
 
-#if 0
 
 /**
  * @test Verify WritesDone() operations on rdwr RPC streams are intercepted.
@@ -476,4 +475,3 @@ TEST(mocked_grpc_interceptor, rdwr_stream_finish_future) {
   ASSERT_EQ(wait_response, std::future_status::ready);
   ASSERT_THROW(fut2.get(), std::exception);
 }
-#endif // 0

@@ -348,7 +348,6 @@ public:
     interceptor_.async_read(stream, op, tag);
   }
 
-#if 0
   /**
    * Make an asynchronous call to WritesDone() and call the functor
    * when it is completed.
@@ -412,8 +411,6 @@ public:
     });
     return promise->get_future().share();
   }
-
-#endif /* 0 */
 
 private:
   /**
