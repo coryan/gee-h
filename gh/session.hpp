@@ -28,6 +28,7 @@ public:
    */
   virtual std::uint64_t lease_id() const = 0;
 
+  /// The TTL assigned by the etcd server
   virtual std::chrono::milliseconds actual_TTL() const = 0;
 
   /**
@@ -37,6 +38,9 @@ public:
    * canceled and the lease is revoked on the server.
    */
   virtual void revoke() = 0;
+
+  /// Returns true if the session is connected to etcd with a valid lease
+  virtual bool is_active() const = 0;
 };
 
 } // namespace gh

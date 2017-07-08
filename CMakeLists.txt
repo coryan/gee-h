@@ -107,6 +107,8 @@ include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}")
 # Compile things into a shared library, apparently it is easy to instruct cmake(1) to generate a static library even
 # if we only describe how to create a shared lib.
 add_library(gee_h SHARED
+        gh/active_completion_queue.hpp
+        gh/active_completion_queue.cpp
         gh/assert_throw.hpp
         gh/assert_throw.cpp
         gh/detail/base_async_op.hpp
@@ -143,6 +145,7 @@ target_link_libraries(gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIB
 
 # ... all the unit tests, we setup the targets and dependencies in a loop ...
 set(all_unit_tests
+        gh_active_completion_queue_ut
         gh_assert_throw_ut
         gh_completion_queue_ut
         gh_detail_base_completion_queue_ut
@@ -177,3 +180,7 @@ endforeach()
 # ... a giant executable with all the unit tests, this is convenient when using CLion ...
 add_executable(all_unit_tests ${ut_sources})
 target_link_libraries(all_unit_tests gee_h gmock gtest gtest_main)
+
+# ... an integration test, using the unit test framework to report results ...
+add_executable(gh_session_test gh/session_test.cpp)
+target_link_libraries(gh_session_test gee_h gmock gtest gtest_main)

@@ -38,6 +38,13 @@ public:
     return actual_TTL_;
   }
 
+  bool is_active() const override {
+    auto c = state_machine_.current();
+    using s = session_state;
+    return c == s::connected or c == s::waiting_for_timer or c == s::waiting_for_keep_alive_write or
+           c == s::waiting_for_keep_alive_read;
+  }
+
   /// Convert a duration to the preferred units in this class
   template <typename other_duration_type>
   static duration_type convert_duration(other_duration_type d) {

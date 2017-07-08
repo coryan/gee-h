@@ -67,7 +67,7 @@ PointerAlignment: Left
 
 # We want to treat files ending in _ut.cpp (unit tests), and _bm.cpp
 # (benchmarks) as the "main" include, so the header shows up first.
-IncludeIsMainRegex: '(_ut)?$'
+IncludeIsMainRegex: '(_ut|_test)?$'
 
 # Sort the includes by dependency order
 IncludeCategories:
