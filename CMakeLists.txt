@@ -116,6 +116,7 @@ add_library(gee_h SHARED
         gh/detail/default_grpc_interceptor.hpp
         gh/detail/mocked_grpc_interceptor.hpp
         gh/detail/null_stream.hpp
+        gh/detail/stream_async_ops.hpp
         gh/completion_queue.hpp
         gh/log.hpp
         gh/log.cpp
