@@ -31,7 +31,6 @@ struct mocked_grpc_interceptor {
     shared_mock->async_rpc(op);
   }
 
-#if 0
   /// Intercept creation of asynchronous rdwr RPC streams.
   template <typename C, typename M, typename op_type>
   void async_create_rdwr_stream(
@@ -40,6 +39,7 @@ struct mocked_grpc_interceptor {
     shared_mock->async_create_rdwr_stream(op);
   }
 
+#if 0
   /// Intercept an asynchronous Write() operation over a rdwr RPC stream
   template <typename W, typename R, typename op_type>
   void async_write(
@@ -76,10 +76,9 @@ struct mocked_grpc_interceptor {
   struct mocked {
     MOCK_CONST_METHOD1(make_deadline_timer, void(std::shared_ptr<base_async_op> op));
     MOCK_CONST_METHOD1(async_rpc, void(std::shared_ptr<base_async_op> op));
+    MOCK_CONST_METHOD1(async_create_rdwr_stream, void(std::shared_ptr<base_async_op> op));
 
 #if 0
-    MOCK_CONST_METHOD1(
-        async_create_rdwr_stream, void(std::shared_ptr<base_async_op> op));
     MOCK_CONST_METHOD1(async_write, void(std::shared_ptr<base_async_op> op));
     MOCK_CONST_METHOD1(async_read, void(std::shared_ptr<base_async_op> op));
     MOCK_CONST_METHOD1(

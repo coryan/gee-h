@@ -126,7 +126,7 @@ TEST(mocked_grpc_interceptor, async_rpc) {
 /**
  * @test Verify canceled RPCs result in exception for the std::promise.
  */
-TEST(mocked_grpc_interceptor, rpc_cancelled) {
+TEST(mocked_grpc_interceptor, async_rpc_cancelled) {
   using namespace std::chrono_literals;
 
   // Create a null lease object, we do not need (or want) a real
@@ -162,8 +162,6 @@ TEST(mocked_grpc_interceptor, rpc_cancelled) {
   ASSERT_THROW(fut.get(), std::exception);
 }
 
-#if 0
-
 /**
  * @test Verify creation of rdwr RPC streams is intercepted.
  */
@@ -194,10 +192,10 @@ TEST(mocked_grpc_interceptor, create_rdwr_stream_future) {
       gh::use_future());
 
   // ... check that the promise was immediately satisfied ...
-  BOOST_REQUIRE_EQUAL(fut.wait_for(0ms), std::future_status::ready);
+  ASSERT_EQ(fut.wait_for(0ms), std::future_status::ready);
 
   // ... and that it did not raise an exception ..
-  BOOST_CHECK_NO_THROW(fut.get());
+  ASSERT_NO_THROW(fut.get());
   // ... we do not check the value because that is too complicated to
   // setup ...
 
@@ -209,8 +207,8 @@ TEST(mocked_grpc_interceptor, create_rdwr_stream_future) {
   auto fut2 = queue.async_create_rdwr_stream(
       lease.get(), &etcdserverpb::Lease::Stub::AsyncLeaseKeepAlive, "test/CreateLeaseKeepAlive/future/cancelled",
       gh::use_future());
-  BOOST_REQUIRE_EQUAL(fut2.wait_for(0ms), std::future_status::ready);
-  BOOST_CHECK_THROW(fut2.get(), std::exception);
+  ASSERT_EQ(fut2.wait_for(0ms), std::future_status::ready);
+  ASSERT_THROW(fut2.get(), std::exception);
 }
 
 /**
@@ -244,8 +242,10 @@ TEST(mocked_grpc_interceptor, create_rdwr_stream_functor) {
       lease.get(), &etcdserverpb::Lease::Stub::AsyncLeaseKeepAlive, "test/CreateLeaseKeepAlive/functor",
       [cnt](auto op, bool ok) { *cnt += int(ok); });
 
- ASSERT_EQ(counter, 1);
+  ASSERT_EQ(counter, 1);
 }
+
+#if 0
 
 /**
  * @test Verify Write() operations on rdwr RPC streams are intercepted.
@@ -386,8 +386,8 @@ TEST(mocked_grpc_interceptor, rdwr_stream_writes_done_future) {
   stream_type stream;
   auto fut = queue.async_writes_done(stream, "test/AsyncLeaseKeepAlive::WritesDone/future", gh::use_future());
   auto wait_response = fut.wait_for(0ms);
-  BOOST_REQUIRE_EQUAL(wait_response, std::future_status::ready);
-  BOOST_CHECK_NO_THROW(fut.get());
+  ASSERT_EQ(wait_response, std::future_status::ready);
+  ASSERT_NO_THROW(fut.get());
 
   // ... also test cancelations ...
   EXPECT_CALL(*queue.interceptor().shared_mock, async_writes_done(_)).WillRepeatedly(Invoke([](auto op) mutable {
@@ -396,8 +396,8 @@ TEST(mocked_grpc_interceptor, rdwr_stream_writes_done_future) {
   auto fut2 =
       queue.async_writes_done(stream, "test/AsyncLeaseKeepAlive::WritesDone/future/canceled", gh::use_future());
   wait_response = fut2.wait_for(0ms);
-  BOOST_REQUIRE_EQUAL(wait_response, std::future_status::ready);
-  BOOST_CHECK_THROW(fut2.get(), std::exception);
+  ASSERT_EQ(wait_response, std::future_status::ready);
+  ASSERT_THROW(fut2.get(), std::exception);
 }
 /**
  * @test Verify Finish() operations on rdwr RPC streams are intercepted.
@@ -464,8 +464,8 @@ TEST(mocked_grpc_interceptor, rdwr_stream_finish_future) {
   stream_type stream;
   auto fut = queue.async_finish(stream, "test/AsyncLeaseKeepAlive::Finish/future", gh::use_future());
   auto wait_response = fut.wait_for(0ms);
-  BOOST_REQUIRE_EQUAL(wait_response, std::future_status::ready);
-  BOOST_CHECK_NO_THROW(fut.get());
+  ASSERT_EQ(wait_response, std::future_status::ready);
+  ASSERT_NO_THROW(fut.get());
 
   // ... also test cancelations ...
   EXPECT_CALL(*queue.interceptor().shared_mock, async_finish(_)).WillRepeatedly(Invoke([](auto op) mutable {
@@ -473,7 +473,7 @@ TEST(mocked_grpc_interceptor, rdwr_stream_finish_future) {
   }));
   auto fut2 = queue.async_finish(stream, "test/AsyncLeaseKeepAlive::Finish/future/canceled", gh::use_future());
   wait_response = fut2.wait_for(0ms);
-  BOOST_REQUIRE_EQUAL(wait_response, std::future_status::ready);
-  BOOST_CHECK_THROW(fut2.get(), std::exception);
+  ASSERT_EQ(wait_response, std::future_status::ready);
+  ASSERT_THROW(fut2.get(), std::exception);
 }
 #endif // 0

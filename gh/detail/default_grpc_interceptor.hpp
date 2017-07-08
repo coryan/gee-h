@@ -30,7 +30,6 @@ struct default_grpc_interceptor {
     op->rpc->Finish(&op->response, &op->status, tag);
   }
 
-#if 0
   /// Post an asynchronous operation to create a rdwr RPC stream
   template <typename C, typename M, typename op_type>
   void async_create_rdwr_stream(
@@ -39,6 +38,7 @@ struct default_grpc_interceptor {
     op->stream->client = (async_client->*call)(&op->stream->context, cq, tag);
   }
 
+#if 0
   /// Post an asynchronous Write() operation over a rdwr RPC stream
   template <typename W, typename R, typename op_type>
   void async_write(

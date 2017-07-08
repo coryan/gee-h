@@ -5,6 +5,7 @@
 #include <gh/detail/base_completion_queue.hpp>
 #include <gh/detail/deadline_timer.hpp>
 #include <gh/detail/default_grpc_interceptor.hpp>
+#include <gh/detail/stream_async_ops.hpp>
 
 #include <functional>
 #include <future>
@@ -194,7 +195,6 @@ public:
     return promise->get_future().share();
   }
 
-#if 0
   /**
    * Create a new asynchronous read-write stream and call the functor
    * when it is constructed and ready.
@@ -236,8 +236,8 @@ public:
     static_assert(
         requirements::matches::value,
         "The member function signature does not match: "
-        "std::unique_ptr<grpc::ClientAsyncReaderWriter<W, R>>("
-        "grpc::ClientContext*,grpc::CompletionQueue*,void*)");
+            "std::unique_ptr<grpc::ClientAsyncReaderWriter<W, R>>("
+            "grpc::ClientContext*,grpc::CompletionQueue*,void*)");
     using write_type = typename requirements::write_type;
     using read_type = typename requirements::read_type;
 
@@ -321,6 +321,7 @@ public:
     return promise->get_future().share();
   }
 
+#if 0
   /**
    * Make an asynchronous call to Write() and call the functor
    * when it is completed.
