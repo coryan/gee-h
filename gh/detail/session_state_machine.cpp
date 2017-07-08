@@ -44,7 +44,7 @@ bool session_state_machine::check_change_state(char const* where, session_state 
   using s = session_state;
   switch (state_) {
   case s::shutdown:
-    return false;
+    break;
   case s::shutting_down:
     return nstate == s::shutdown;
   case s::revoked:
@@ -68,7 +68,7 @@ bool session_state_machine::check_change_state(char const* where, session_state 
   case s::constructing:
     return nstate == s::connecting;
   }
-  return true;
+  return false;
 }
 
 } // namespace detail

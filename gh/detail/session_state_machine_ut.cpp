@@ -36,6 +36,7 @@ TEST(session_state_machine, basic) {
   ASSERT_FALSE(machine.change_state("test", s::revoking));
   ASSERT_FALSE(machine.change_state("test", s::revoked));
   ASSERT_TRUE(machine.change_state("test", s::shutdown));
+  ASSERT_FALSE(machine.change_state("test", s::shutting_down));
 }
 
 /**
