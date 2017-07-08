@@ -115,6 +115,8 @@ add_library(gee_h SHARED
         gh/detail/base_async_op.hpp
         gh/detail/base_completion_queue.hpp
         gh/detail/base_completion_queue.cpp
+        gh/detail/candidate_state_machine.hpp
+        gh/detail/candidate_state_machine.cpp
         gh/detail/deadline_timer.hpp
         gh/detail/default_grpc_interceptor.hpp
         gh/detail/grpc_errors.hpp
@@ -150,6 +152,7 @@ set(all_unit_tests
         gh_assert_throw_ut
         gh_completion_queue_ut
         gh_detail_base_completion_queue_ut
+        gh_detail_candidate_state_machine_ut
         gh_detail_grpc_errors_ut
         gh_detail_mocked_grpc_interceptor_ut
         gh_detail_null_stream_ut
