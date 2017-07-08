@@ -25,6 +25,7 @@ TEST(session_state_machine, basic) {
   ASSERT_TRUE(machine.change_state("test", s::obtaining_lease));
   ASSERT_TRUE(machine.change_state("test", s::lease_obtained));
   ASSERT_TRUE(machine.change_state("test", s::waiting_for_timer));
+  ASSERT_TRUE(machine.change_state("test", s::waiting_for_keep_alive_write));
   ASSERT_TRUE(machine.change_state("test", s::waiting_for_keep_alive_read));
   ASSERT_TRUE(machine.change_state("test", s::waiting_for_timer));
   ASSERT_TRUE(machine.change_state("test", s::revoking));
@@ -44,9 +45,10 @@ TEST(session_state, streaming) {
   using s = gh::detail::session_state;
   std::ostringstream os;
   os << " " << s::constructing << " " << s::connecting << " " << s::connected << " " << s::obtaining_lease << " "
-     << s::lease_obtained << " " << s::waiting_for_timer << " " << s::waiting_for_keep_alive_read << " " << s::revoking
-     << " " << s::revoked << " " << s::shutting_down << " " << s::shutdown;
+     << s::lease_obtained << " " << s::waiting_for_timer << " " << s::waiting_for_keep_alive_write << " "
+     << s::waiting_for_keep_alive_read << " " << s::revoking << " " << s::revoked << " " << s::shutting_down << " "
+     << s::shutdown;
   ASSERT_EQ(
       os.str(), " constructing connecting connected obtaining_lease lease_obtained waiting_for_timer "
-      "waiting_for_keep_alive_read revoking revoked shutting_down shutdown");
+                "waiting_for_keep_alive_write waiting_for_keep_alive_read revoking revoked shutting_down shutdown");
 }

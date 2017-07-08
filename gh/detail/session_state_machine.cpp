@@ -11,6 +11,7 @@ std::ostream& operator<<(std::ostream& os, session_state x) {
       "obtaining_lease",
       "lease_obtained",
       "waiting_for_timer",
+      "waiting_for_keep_alive_write",
       "waiting_for_keep_alive_read",
       "revoking",
       "revoked",
@@ -52,8 +53,10 @@ bool session_state_machine::check_change_state(char const* where, session_state 
     return nstate == s::revoked or nstate == s::shutting_down;
   case s::waiting_for_keep_alive_read:
     return nstate == s::waiting_for_timer or nstate == s::revoking or nstate == s::shutting_down;
-  case s::waiting_for_timer:
+  case s::waiting_for_keep_alive_write:
     return nstate == s::waiting_for_keep_alive_read or nstate == s::revoking or nstate == s::shutting_down;
+  case s::waiting_for_timer:
+    return nstate == s::waiting_for_keep_alive_write or nstate == s::revoking or nstate == s::shutting_down;
   case s::lease_obtained:
     return nstate == s::waiting_for_timer or nstate == s::shutting_down or nstate == s::revoking;
   case s::obtaining_lease:

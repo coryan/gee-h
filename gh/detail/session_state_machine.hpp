@@ -27,7 +27,9 @@ enum class session_state {
   lease_obtained,
   /// Waiting for timer to expire.
   waiting_for_timer,
-  /// Waiting for heartbeat ack.
+  /// Waiting for the KeepAlive write to complete.
+  waiting_for_keep_alive_write,
+  /// Waiting for the KeepAlive read to complete.
   waiting_for_keep_alive_read,
   /// Revoking the lease.
   revoking,

@@ -123,6 +123,9 @@ add_library(gee_h SHARED
         gh/detail/stream_async_ops.hpp
         gh/detail/session_state_machine.cpp
         gh/detail/session_state_machine.hpp
+        gh/detail/session_impl.hpp
+        gh/detail/session_impl_common.hpp
+        gh/detail/session_impl_common.cpp
         gh/completion_queue.hpp
         gh/log.hpp
         gh/log.cpp
@@ -131,26 +134,14 @@ add_library(gee_h SHARED
         gh/log_sink.hpp
         gh/prefix_end.hpp
         gh/prefix_end.cpp
+        gh/session.hpp
+        gh/session.cpp
         ${PROTO_SOURCES} ${PROTO_HDRS}
         ${GRPCPP_SOURCES} ${GRPCPP_HEADERS}
     )
 target_link_libraries(gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
 
-# ... the unit tests, just the target name and the source code file, we use a foreach() to add dependencies ...
-add_executable(gh_assert_throw_ut gh/assert_throw_ut.cpp)
-add_executable(gh_completion_queue_ut gh/completion_queue_ut.cpp)
-add_executable(gh_detail_base_completion_queue_ut gh/detail/base_completion_queue_ut.cpp)
-add_executable(gh_detail_grpc_errors_ut gh/detail/grpc_errors_ut.cpp)
-add_executable(gh_detail_mocked_grpc_interceptor_ut gh/detail/mocked_grpc_interceptor_ut.cpp)
-add_executable(gh_detail_null_stream_ut gh/detail/null_stream_ut.cpp)
-add_executable(gh_detail_session_state_ut gh/detail/session_state_machine_ut.cpp)
-add_executable(gh_log_ut gh/log_ut.cpp)
-add_executable(gh_log_severity_ut gh/log_severity_ut.cpp)
-add_executable(gh_log_sink_ut  gh/log_sink_ut.cpp)
-add_executable(gh_prefix_end_ut gh/prefix_end_ut.cpp)
-
-# ... in cmake-3.7 we could use BUILDSYSTEM_TARGETS to get the list of all targets. Unfortunately Ubuntu 16.04 ships
-# with cmake-3.5, so instead  ...
+# ... all the unit tests, we setup the targets and dependencies in a loop ...
 set(all_unit_tests
         gh_assert_throw_ut
         gh_completion_queue_ut
@@ -158,7 +149,8 @@ set(all_unit_tests
         gh_detail_grpc_errors_ut
         gh_detail_mocked_grpc_interceptor_ut
         gh_detail_null_stream_ut
-        gh_detail_session_state_ut
+        gh_detail_session_impl_ut
+        gh_detail_session_state_machine_ut
         gh_log_ut
         gh_log_severity_ut
         gh_log_sink_ut
@@ -168,9 +160,12 @@ set(all_unit_tests
 # ... add the right libraries to all the unit tests, and also turn them into tests ...
 set(ut_sources)
 foreach(target ${all_unit_tests})
-    get_target_property(tname ${target} NAME)
-    string(REGEX MATCH ".*_ut$" is_ut ${tname})
+    string(REGEX MATCH ".*_ut$" is_ut ${target})
     if(is_ut)
+        string(REGEX REPLACE "^gh_detail_" "gh/detail/" fname0 ${target})
+        string(REGEX REPLACE "^gh_" "gh/" fname ${fname0})
+        message("target fname " ${target} ${fname})
+        add_executable(${target} ${fname})
         get_target_property(tname ${target} NAME)
         target_link_libraries(${target} gmock gtest gtest_main gee_h grpc++ grpc protobuf)
         add_test(${tname} ${target})
