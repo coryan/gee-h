@@ -111,6 +111,7 @@ add_library(gee_h SHARED
         gh/active_completion_queue.cpp
         gh/assert_throw.hpp
         gh/assert_throw.cpp
+        gh/completion_queue.hpp
         gh/detail/async_rpc_op.hpp
         gh/detail/base_async_op.hpp
         gh/detail/base_completion_queue.hpp
@@ -119,6 +120,7 @@ add_library(gee_h SHARED
         gh/detail/candidate_state_machine.cpp
         gh/detail/deadline_timer.hpp
         gh/detail/default_grpc_interceptor.hpp
+        gh/detail/election_observer_impl.hpp
         gh/detail/grpc_errors.hpp
         gh/detail/grpc_errors.cpp
         gh/detail/grpc_errors.cpp
@@ -131,7 +133,8 @@ add_library(gee_h SHARED
         gh/detail/session_impl.hpp
         gh/detail/session_impl_common.hpp
         gh/detail/session_impl_common.cpp
-        gh/completion_queue.hpp
+        gh/election_observer.hpp
+        gh/election_observer.cpp
         gh/log.hpp
         gh/log.cpp
         gh/log_severity.hpp
@@ -153,6 +156,7 @@ set(all_unit_tests
         gh_completion_queue_ut
         gh_detail_base_completion_queue_ut
         gh_detail_candidate_state_machine_ut
+        gh_detail_election_observer_impl_ut
         gh_detail_grpc_errors_ut
         gh_detail_mocked_grpc_interceptor_ut
         gh_detail_null_stream_ut
