@@ -94,11 +94,10 @@ TEST(session_impl, lease_error) {
     return op->name == "session/set_timer/ttl_refresh";
   }))).Times(0);
 
-  std::unique_ptr<session_type> session;
-
+  std::unique_ptr<session_type> s;
   EXPECT_THROW(
-      session = std::make_unique<session_type>(queue, std::unique_ptr<etcdserverpb::Lease::Stub>(), 5000ms),
-      std::exception);
+      s = std::make_unique<session_type>(queue, std::unique_ptr<etcdserverpb::Lease::Stub>(), 5000ms), std::exception);
+  EXPECT_FALSE((bool)s);
 }
 
 /**
@@ -123,11 +122,10 @@ TEST(session_impl, lease_unusual_exception) {
     return op->name == "session/set_timer/ttl_refresh";
   }))).Times(0);
 
-  std::unique_ptr<session_type> session;
-
+  std::unique_ptr<session_type> s;
   EXPECT_THROW(
-      session = std::make_unique<session_type>(queue, std::unique_ptr<etcdserverpb::Lease::Stub>(), 5000ms),
-      std::string);
+      s = std::make_unique<session_type>(queue, std::unique_ptr<etcdserverpb::Lease::Stub>(), 5000ms), std::string);
+  EXPECT_FALSE((bool)s);
 }
 
 /**
@@ -279,7 +277,7 @@ TEST(session_impl, race_timer) {
   using revoke_op_type = async_rpc_op<etcdserverpb::LeaseRevokeRequest, etcdserverpb::LeaseRevokeResponse>;
   EXPECT_CALL(*queue.interceptor().shared_mock, async_rpc(Truly([](auto op) {
     return op->name == "session/revoke/lease_revoke";
-  }))).WillOnce(Invoke([t = std::ref(pending_timer), &session](auto bop) {
+  }))).WillOnce(Invoke([ t = std::ref(pending_timer), &session ](auto bop) {
     ASSERT_FALSE(session->is_active());
     auto* op = dynamic_cast<revoke_op_type*>(bop.get());
     ASSERT_TRUE(op != nullptr);
@@ -304,12 +302,6 @@ void prepare_mocks_common(completion_queue_type& queue) {
   EXPECT_CALL(*queue.interceptor().shared_mock, async_rpc(_)).WillRepeatedly(Invoke([](auto op) {
     op->callback(*op, true);
   }));
-  EXPECT_CALL(*queue.interceptor().shared_mock, async_read(_)).WillRepeatedly(Invoke([](auto op) {
-    op->callback(*op, true);
-  }));
-  EXPECT_CALL(*queue.interceptor().shared_mock, async_write(_)).WillRepeatedly(Invoke([](auto op) {
-    op->callback(*op, true);
-  }));
   EXPECT_CALL(*queue.interceptor().shared_mock, async_create_rdwr_stream(_)).WillRepeatedly(Invoke([](auto op) {
     op->callback(*op, true);
   }));
@@ -317,9 +309,6 @@ void prepare_mocks_common(completion_queue_type& queue) {
     op->callback(*op, true);
   }));
   EXPECT_CALL(*queue.interceptor().shared_mock, async_finish(_)).WillRepeatedly(Invoke([](auto op) {
-    op->callback(*op, true);
-  }));
-  EXPECT_CALL(*queue.interceptor().shared_mock, make_deadline_timer(_)).WillRepeatedly(Invoke([](auto op) {
     op->callback(*op, true);
   }));
 }
