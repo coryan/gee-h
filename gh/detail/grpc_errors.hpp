@@ -21,19 +21,18 @@ namespace detail {
  * This is often converted into an exception, but it is easier to
  * unit tests if separated.
  *
- * @param where a string to let the user know where the error took
- * place.
+ * @param where a string to let the user know where the error took place.
  * @param status the status to format
+ * @param a a list of additional annotations to append (using operator<<) to the end of the exception what() message.
+ * @throws a std::exception if the @a status.ok() is false.
  */
 template <typename Location, typename... Annotations>
-void check_grpc_status(
-    grpc::Status const& status, Location const& where, Annotations&&... a) {
+void check_grpc_status(grpc::Status const& status, Location const& where, Annotations&&... a) {
   if (status.ok()) {
     return;
   }
   std::ostringstream os;
-  os << where << " grpc error: " << status.error_message() << " ["
-     << status.error_code() << "]";
+  os << where << " grpc error: " << status.error_message() << " [" << status.error_code() << "]";
   detail::append_annotations(os, std::forward<Annotations>(a)...);
   throw std::runtime_error(os.str());
 }
@@ -41,8 +40,7 @@ void check_grpc_status(
 /**
  * Print a protobuf on a std::ostream.
  *
- * Uses google::protobuf::TextFormat::PrintToString to print a
- * protobuf.  Typically one would use is as in:
+ * Uses google::protobuf::TextFormat::PrintToString to print a protobuf.  Typically one would use is as in:
  *
  * @code
  * blah::ProtoName const& proto = ...;
