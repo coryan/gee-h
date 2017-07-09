@@ -71,24 +71,21 @@ IncludeIsMainRegex: '(_ut|_test)?$'
 
 # Sort the includes by dependency order
 IncludeCategories:
-  - Regex:    '^<jb/clfft/'
-    Priority: 100
-  - Regex:    '^<jb/opencl/'
-    Priority: 200
-  # Any subdirectory of jb/ has higher priority than a plain jb/
-  - Regex:    '^<jb/[^/]*/'
-    Priority: 900
-  - Regex:    '^<jb/'
+  - Regex:    '^<gh/'
     Priority: 1000
-  - Regex:    '^<valgrind/'
-    Priority: 2000
-  - Regex:    '^<skye/'
-    Priority: 3000
-  - Regex:    '^<beast/'
-    Priority: 3500
-  - Regex:    '^<boost/'
-    Priority: 4000
-  - Regex:    '^<yaml-cpp/'
+  - Regex:    '^<gtest/'
+    Priority: 5001
+  - Regex:    '^<gmock/'
     Priority: 5000
-  - Regex:    '^<fftw3'
-    Priority: 5000
+  - Regex:    '^<etcd/'
+    Priority: 10000
+  - Regex:    '^<gogoproto/'
+    Priority: 11000
+  - Regex:    '^<google/api/'
+    Priority: 12000
+  - Regex:    '^<grpc++/'
+    Priority: 13000
+  - Regex:    '^<grpc/'
+    Priority: 14000
+  - Regex:    '^<google/'
+    Priority: 15000
