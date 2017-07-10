@@ -24,6 +24,12 @@ public:
   /// Destructor, can raise if deleting local gRPC resources fail.
   virtual ~election_observer() noexcept(false) = 0;
 
+  /// Connects to the etcd server and starts watching the election.
+  virtual void startup() = 0;
+
+  /// Disconnects from the etcd server and stops watching the election.
+  virtual void shutdown() = 0;
+
   /// Returns false if no elected has been elected.
   virtual bool has_leader() const = 0;
 

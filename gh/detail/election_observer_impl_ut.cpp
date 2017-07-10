@@ -30,6 +30,7 @@ TEST(election_observer_impl, basic) {
 
   auto observer = std::make_unique<observer_type>(
       "mock-election", queue, std::unique_ptr<etcdserverpb::KV::Stub>(), std::unique_ptr<etcdserverpb::Watch::Stub>());
+  observer->startup();
 
   EXPECT_FALSE(observer->has_leader());
   EXPECT_THROW(observer->current_key(), std::exception);
@@ -81,6 +82,7 @@ TEST(election_observer_impl, normal_lifecycle) {
 
   auto observer = std::make_unique<observer_type>(
       "mock-election", queue, std::unique_ptr<etcdserverpb::KV::Stub>(), std::unique_ptr<etcdserverpb::Watch::Stub>());
+  observer->startup();
 
   EXPECT_TRUE(observer->has_leader());
   EXPECT_EQ(observer->election_name(), std::string("mock-election"));

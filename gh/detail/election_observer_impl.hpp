@@ -54,11 +54,10 @@ public:
       , kv_stub_(std::move(kv_stub))
       , watch_stub_(std::move(watch_stub)) {
     election_prefix_ += '/'; // ... complete initialization of the field
-    startup();
   }
 
   virtual ~election_observer_impl() noexcept(false) {
-    shutdown();
+    cleanup();
   }
 
   //@{
@@ -106,16 +105,23 @@ public:
     std::lock_guard<std::mutex> lock(mu_);
     subscriptions_.erase(token);
   }
-  //}
-
-private:
-  void startup() {
+  virtual void startup() override {
     create_watcher_stream();
     discover_node_with_lowest_creation_revision();
   }
-
-  void shutdown() {
+  virtual void shutdown() override {
+    // cancel_watcher();
+    // cleanup();
   }
+  //}
+
+private:
+  /// Cleanup local resources, e.g. cancel pending operations and wait for them.
+  void cleanup() {
+    // try to cancel the pending operations with TryCancel()
+    // wait for pending operations
+  }
+
 
   void create_watcher_stream() {
     // ... we use a blocking operation here because the extra complexity to make these asynchronous is not worth it ...
