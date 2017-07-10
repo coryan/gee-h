@@ -26,18 +26,23 @@
  */
 #define GH_LOGGER_IDENTIFIER GH_PP_CAT(gh_log_, __LINE__)
 
-#ifndef GH_LOG_I
 /**
  * The main entry point for Gee-H logging facilities.
  *
- * Typically this would be used
+ * Typically this used only in tests, applications should use GH_LOG().
  */
 #define GH_LOG_I(level, sink)                                                                                          \
   for (auto GH_LOGGER_IDENTIFIER = gh::logger<level_compile_time_disabled(gh::severity::level)>(                       \
            gh::severity::level, __func__, __FILE__, __LINE__, sink);                                                   \
        (bool)GH_LOGGER_IDENTIFIER; GH_LOGGER_IDENTIFIER.write_to(sink))                                                \
   GH_LOGGER_IDENTIFIER.get()
-#endif // GH_LOG_I
+
+/**
+ * Declare a logger named @a name.
+ */
+#define GH_LOGGER_DECL(level, sink, name)                                                                              \
+  gh::logger<level_compile_time_disabled(gh::severity::level)> name(                                                   \
+      gh::severity::level, __func__, __FILE__, __LINE__, sink)
 
 #ifndef GH_LOG
 #define GH_LOG(level) GH_LOG_I(level, gh::log::instance())

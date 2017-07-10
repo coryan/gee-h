@@ -6,7 +6,7 @@
 #ifndef gh_detail_grpc_errors_hpp
 #define gh_detail_grpc_errors_hpp
 
-#include <gh/detail/grpc_errors_annotations.hpp>
+#include <gh/detail/append_annotations.hpp>
 
 #include <google/protobuf/message.h>
 #include <grpc++/grpc++.h>
