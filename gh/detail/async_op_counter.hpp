@@ -51,7 +51,7 @@ public:
    */
   template <typename... Annotations>
   bool async_op_start(Annotations&&... a) {
-    GH_LOGGER_DECL(trace, gh::log::instance(), logger);
+    GH_LOGGER_DECL(info, gh::log::instance(), logger);
     if (logger) {
       append_annotations(logger.get(), "async_op_start(): ", std::forward<Annotations>(a)...);
       logger.write_to(gh::log::instance());
@@ -70,7 +70,7 @@ public:
    */
   template <typename... Annotations>
   void async_op_done(Annotations&&... a) {
-    GH_LOGGER_DECL(trace, gh::log::instance(), logger);
+    GH_LOGGER_DECL(info, gh::log::instance(), logger);
     if (logger) {
       append_annotations(logger.get(), "async_op_done(): ", std::forward<Annotations>(a)...);
       logger.write_to(gh::log::instance());
