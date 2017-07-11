@@ -171,7 +171,7 @@ private:
   severity sev;
   std::string function;
   std::string filename;
-  std::string lineno;
+  int lineno;
   bool closed;
 };
 

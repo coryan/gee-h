@@ -53,7 +53,7 @@ logger<false>::logger(severity s, char const* func, char const* file, int l, log
 
 void logger<false>::write_to(log& sink) {
   closed = true;
-  os << " in " << function << "(" << filename << ":" << lineno << ")";
+  os << " in " << function << " (" << filename << ":" << lineno << ")";
   sink.write(sev, os.str());
 }
 
