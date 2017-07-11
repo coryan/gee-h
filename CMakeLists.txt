@@ -151,6 +151,9 @@ add_library(gee_h SHARED
     )
 target_link_libraries(gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
 
+add_executable(observe_election examples/observe_election.cpp)
+target_link_libraries(observe_election gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
+
 # ... all the unit tests, we setup the targets and dependencies in a loop ...
 set(all_unit_tests
         gh_active_completion_queue_ut
