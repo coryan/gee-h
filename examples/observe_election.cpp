@@ -21,6 +21,9 @@ int main(int argc, char* argv[]) try {
 
   auto etcd_channel = grpc::CreateChannel("localhost:2379", grpc::InsecureChannelCredentials());
 
+  gh::log::instance().add_sink(
+      gh::make_log_sink([](gh::severity sev, std::string&& x) { std::cerr << x << std::endl; }));
+
   gh::active_completion_queue queue;
   std::shared_ptr<gh::election_observer> election_observer(new observer_type(
       election_name, queue.cq(), etcdserverpb::KV::NewStub(etcd_channel), etcdserverpb::Watch::NewStub(etcd_channel)));
