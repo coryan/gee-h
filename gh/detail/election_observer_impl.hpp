@@ -3,6 +3,7 @@
 
 #include <gh/assert_throw.hpp>
 #include <gh/completion_queue.hpp>
+#include <gh/detail/async_op_counter.hpp>
 #include <gh/detail/async_rpc_op.hpp>
 #include <gh/detail/stream_async_ops.hpp>
 #include <gh/election_observer.hpp>
@@ -13,8 +14,8 @@
 #include <cstdint>
 #include <map>
 #include <mutex>
-#include <unordered_map>
 #include <sstream>
+#include <unordered_map>
 
 namespace gh {
 namespace detail {
@@ -52,7 +53,8 @@ public:
       , subscriptions_()
       , token_gen_(0)
       , kv_stub_(std::move(kv_stub))
-      , watch_stub_(std::move(watch_stub)) {
+      , watch_stub_(std::move(watch_stub))
+      , ops_() {
     election_prefix_ += '/'; // ... complete initialization of the field
   }
 
@@ -118,17 +120,39 @@ public:
 private:
   /// Cleanup local resources, e.g. cancel pending operations and wait for them.
   void cleanup() {
-    // try to cancel the pending operations with TryCancel()
-    // wait for pending operations
+    // ... try to cancel any pending operations ...
+    watcher_stream_->context.TryCancel();
+    // ... stop any new operations from being created ...
+    ops_.shutdown();
+    ops_.block_until_all_done();
   }
 
-
   void create_watcher_stream() {
+    if (not ops_.async_op_start("election_observer/create_watcher_stream")) {
+      return;
+    }
     // ... we use a blocking operation here because the extra complexity to make these asynchronous is not worth it ...
     auto fut = queue_.async_create_rdwr_stream(
         watch_stub_.get(), &etcdserverpb::Watch::Stub::AsyncWatch, "election_observer/create_watcher_stream",
         gh::use_future());
     watcher_stream_ = fut.get();
+    ops_.async_op_done("create_watcher_stream()");
+  }
+
+  void create_watcher(long start_revision) {
+    if (not ops_.async_op_start("on_range_request/create_watch")) {
+      return;
+    }
+    etcdserverpb::WatchRequest req;
+    auto& create = *req.mutable_create_request();
+    create.set_key(election_prefix_);
+    create.set_range_end(prefix_end(election_prefix_));
+    create.set_progress_notify(true);
+    create.set_start_revision(start_revision);
+    create.set_prev_kv(true);
+    queue_.async_write(
+        *watcher_stream_, std::move(req), "on_range_request/create_watch",
+        [this](auto const& fop, bool fok) { this->on_watch_create(fop, fok); });
   }
 
   void discover_node_with_lowest_creation_revision() {
@@ -144,7 +168,9 @@ private:
     //   - Only fetch the first of those results.
     req.set_limit(1);
 
-    // TODO() - need to keep track of pending async ops for safe shutdown ...
+    if (not ops_.async_op_start("election_observer/discover_node_with_lowest_creation_revision")) {
+      return;
+    }
     queue_.async_rpc(
         kv_stub_.get(), &etcdserverpb::KV::Stub::AsyncRange, std::move(req),
         "election_observer/discover_node_with_lowest_creation_revision",
@@ -152,7 +178,7 @@ private:
   }
 
   void on_range_request(async_rpc_op<etcdserverpb::RangeRequest, etcdserverpb::RangeResponse> const& op, bool ok) {
-    // TODO() - need to keep track of pending async ops for safe shutdown ...
+    ops_.async_op_done("election_observer/discover_node_with_lowest_creation_revision");
     if (not ok) {
       // ... operation canceled, consider restarting the whole cycle ...
       return;
@@ -161,32 +187,32 @@ private:
     // be reported will be the leader of the election.  If there is one key that is the current leader of the
     // election.  All of this is proceed asynchronously, but the comments help put the code in context ...
     if (not op.response.kvs().empty()) {
+      // ... watch all relevant nodes starting from the first one ...
+      create_watcher(op.response.kvs(0).create_revision());
       GH_ASSERT_THROW(op.response.kvs().size() == 1UL);
       report_election_leader(op.response.kvs(0));
+    } else {
+      // ... watch all the relevant nodes starting from the current revision ...
+      create_watcher(op.response.header().revision());
     }
-    etcdserverpb::WatchRequest req;
-    auto& create = *req.mutable_create_request();
-    create.set_key(election_prefix_);
-    create.set_range_end(prefix_end(election_prefix_));
-    create.set_progress_notify(true);
-    create.set_start_revision(op.response.header().revision());
-    queue_.async_write(
-        *watcher_stream_, std::move(req), "on_range_request/create_watch",
-        [this](auto const& fop, bool fok) { this->on_watch_create(fop, fok); });
   }
 
   void on_watch_create(watch_write_op const& op, bool ok) {
-    // TODO() - need to keep track of pending async ops for safe shutdown ...
+    ops_.async_op_done("election_observer/create_watcher_stream");
     if (not ok) {
       // ... operation canceled, consider restarting the whole cycle ...
       return;
     }
-    queue_.async_read(*watcher_stream_, "on_watch_create/watch_read", [this](auto const& fop, bool fok) {
-      this->on_watch_read(fop, fok);
-    });
+    if (not ops_.async_op_start("election_observer/on_watch_create/watch_read")) {
+      return;
+    }
+    queue_.async_read(
+        *watcher_stream_, "election_observer/on_watch_create/watch_read",
+        [this](auto const& fop, bool fok) { this->on_watch_read(fop, fok); });
   }
 
   void on_watch_read(watch_read_op const& op, bool ok) {
+    ops_.async_op_done("election_observer/on_watch_create/watch_read");
     if (not ok) {
       return;
     }
@@ -199,49 +225,61 @@ private:
     std::unique_lock<std::mutex> lock(mu_);
     bool leader_changed = false;
     for (auto const& ev : op.response.events()) {
-      auto const& kv = ev.kv();
       if (ev.type() == mvccpb::Event::PUT) {
-        auto f = participants_.find(kv.create_revision());
-        if (f != participants_.end()) {
-          f->second = kv;
-        } else {
-          f = participants_.emplace_hint(f, kv.create_revision(), kv);
-        }
-        leader_changed = f == participants_.begin();
+        auto const& kv = ev.kv();
+        leader_changed = handle_node_put(kv) || leader_changed;
       } else if (ev.type() == mvccpb::Event::DELETE) {
-        auto f = participants_.find(ev.kv().create_revision());
-        if (f == participants_.end()) {
-          continue;
-        }
-        leader_changed = f == participants_.begin();
-        participants_.erase(f);
+        auto const& kv = ev.prev_kv();
+        leader_changed = handle_node_delete(kv) || leader_changed;
       }
     }
     if (leader_changed) {
-      mvccpb::KeyValue kv;
-      if (not participants_.empty()) {
-        kv = participants_.begin()->second;
-      }
-      lock.unlock();
-      for (auto const& p : subscriptions_) {
-        try {
-          p.second(kv.key(), kv.value());
-        } catch (...) {
-        }
-      }
+      call_subscribers(lock);
     }
-    queue_.async_read(*watcher_stream_, "on_watch_read/watch_read", [this](auto const& fop, bool fok) {
-      this->on_watch_read(fop, fok);
-    });
+    if (not ops_.async_op_start("election_observer/on_watch_read/watch_read")) {
+      return;
+    }
+    queue_.async_read(
+        *watcher_stream_, "election_observer/on_watch_read/watch_read",
+        [this](auto const& fop, bool fok) { this->on_watch_read(fop, fok); });
+  }
+
+  /// Modify or add a node to the known participants, return true if the leader changed.
+  bool handle_node_put(mvccpb::KeyValue const& kv) {
+    GH_LOG(info) << election_name() << " PUT on " << kv.key() << " = " << kv.value() << " / " << kv.create_revision();
+    auto f = participants_.find(kv.create_revision());
+    if (f != participants_.end()) {
+      f->second = kv;
+    } else {
+      f = participants_.emplace_hint(f, kv.create_revision(), kv);
+    }
+    return f == participants_.begin();
+  }
+
+  /// Delete a node from the known participants, return true if the leader changed.
+  bool handle_node_delete(mvccpb::KeyValue const& kv) {
+    GH_LOG(info) << election_name() << " DEL on " << kv.key() << " = " << kv.value() << " / " << kv.create_revision();
+    auto f = participants_.find(kv.create_revision());
+    if (f == participants_.end()) {
+      return false;
+    }
+    auto changed = f == participants_.begin();
+    participants_.erase(f);
+    return changed;
   }
 
   void report_election_leader(mvccpb::KeyValue const& kv) {
     std::unique_lock<std::mutex> lock(mu_);
-    auto f = participants_.find(kv.create_revision());
-    if (f != participants_.end() and f->second.value() == kv.value()) {
-      return;
+    if (handle_node_put(kv)) {
+      call_subscribers(lock);
     }
-    participants_[kv.create_revision()] = kv;
+  }
+
+  void call_subscribers(std::unique_lock<std::mutex>& lock) {
+    mvccpb::KeyValue kv;
+    if (not participants_.empty()) {
+      kv = participants_.begin()->second;
+    }
     // ... make a copy of the subscriptions so we can iterate over it without holding the lock ...
     auto copy = subscriptions_;
     // ... and we release the lock because calling application code while holding locks is a recipe for deadlocks ...
@@ -269,6 +307,8 @@ private:
 
   using participants_type = std::map<std::uint64_t, mvccpb::KeyValue>;
   participants_type participants_;
+
+  async_op_counter ops_;
 };
 
 } // namespace detail
