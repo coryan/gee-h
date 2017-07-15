@@ -67,6 +67,12 @@ struct mocked_grpc_interceptor {
     shared_mock->async_finish(op);
   }
 
+  /// Try to cancel pending operations on the asynchronous stream.
+  template <typename W, typename R>
+  void try_cancel_on(detail::async_rdwr_stream<W, R>& stream) {
+    shared_mock->try_cancel();
+  }
+
   struct mocked {
     MOCK_CONST_METHOD1(make_deadline_timer, void(std::shared_ptr<base_async_op> op));
     MOCK_CONST_METHOD1(async_rpc, void(std::shared_ptr<base_async_op> op));
@@ -75,6 +81,7 @@ struct mocked_grpc_interceptor {
     MOCK_CONST_METHOD1(async_read, void(std::shared_ptr<base_async_op> op));
     MOCK_CONST_METHOD1(async_writes_done, void(std::shared_ptr<base_async_op> op));
     MOCK_CONST_METHOD1(async_finish, void(std::shared_ptr<base_async_op> op));
+    MOCK_CONST_METHOD0(try_cancel, void());
   };
 
   std::shared_ptr<mocked> shared_mock;

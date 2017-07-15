@@ -70,6 +70,12 @@ struct default_grpc_interceptor {
       void* tag) {
     stream.client->Finish(&op->status, tag);
   }
+
+  /// Try to cancel pending operations on the asynchronous stream.
+  template <typename W, typename R>
+  void try_cancel_on(detail::async_rdwr_stream<W, R>& stream) {
+    stream.context.TryCancel();
+  }
 };
 
 } // namespace detail

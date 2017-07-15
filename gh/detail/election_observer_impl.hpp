@@ -121,7 +121,7 @@ private:
   /// Cleanup local resources, e.g. cancel pending operations and wait for them.
   void cleanup() {
     // ... try to cancel any pending operations ...
-    watcher_stream_->context.TryCancel();
+    queue_.try_cancel_on(*watcher_stream_);
     // ... stop any new operations from being created ...
     ops_.shutdown();
     ops_.block_until_all_done();
@@ -227,10 +227,10 @@ private:
     for (auto const& ev : op.response.events()) {
       if (ev.type() == mvccpb::Event::PUT) {
         auto const& kv = ev.kv();
-        leader_changed = handle_node_put(kv) || leader_changed;
+        leader_changed = handle_node_put(kv) or leader_changed;
       } else if (ev.type() == mvccpb::Event::DELETE) {
         auto const& kv = ev.prev_kv();
-        leader_changed = handle_node_delete(kv) || leader_changed;
+        leader_changed = handle_node_delete(kv) or leader_changed;
       }
     }
     if (leader_changed) {
@@ -248,12 +248,15 @@ private:
   bool handle_node_put(mvccpb::KeyValue const& kv) {
     GH_LOG(info) << election_name() << " PUT on " << kv.key() << " = " << kv.value() << " / " << kv.create_revision();
     auto f = participants_.find(kv.create_revision());
+    bool changed_value = false;
     if (f != participants_.end()) {
+      changed_value = kv.value() != f->second.value();
       f->second = kv;
     } else {
+      changed_value = true;
       f = participants_.emplace_hint(f, kv.create_revision(), kv);
     }
-    return f == participants_.begin();
+    return f == participants_.begin() and changed_value;
   }
 
   /// Delete a node from the known participants, return true if the leader changed.
