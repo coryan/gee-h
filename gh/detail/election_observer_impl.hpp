@@ -54,6 +54,8 @@ public:
       , token_gen_(0)
       , kv_stub_(std::move(kv_stub))
       , watch_stub_(std::move(watch_stub))
+      , watcher_stream_()
+      , watch_id_()
       , ops_() {
     election_prefix_ += '/'; // ... complete initialization of the field
   }
@@ -112,8 +114,12 @@ public:
     discover_node_with_lowest_creation_revision();
   }
   virtual void shutdown() override {
-    // cancel_watcher();
-    // cleanup();
+    std::unique_lock<std::mutex> lock(mu_);
+    if (not watcher_stream_) {
+      throw std::runtime_error("leader_election::shutdown() called before startup");
+    }
+    lock.unlock();
+    cancel_watcher();
   }
   //}
 
@@ -135,12 +141,14 @@ private:
     auto fut = queue_.async_create_rdwr_stream(
         watch_stub_.get(), &etcdserverpb::Watch::Stub::AsyncWatch, "election_observer/create_watcher_stream",
         gh::use_future());
-    watcher_stream_ = fut.get();
+    auto tmp = fut.get();
     ops_.async_op_done("create_watcher_stream()");
+    std::unique_lock<std::mutex> lock(mu_);
+    watcher_stream_ = tmp;
   }
 
   void create_watcher(long start_revision) {
-    if (not ops_.async_op_start("on_range_request/create_watch")) {
+    if (not ops_.async_op_start("election_observer/create_watcher")) {
       return;
     }
     etcdserverpb::WatchRequest req;
@@ -151,8 +159,20 @@ private:
     create.set_start_revision(start_revision);
     create.set_prev_kv(true);
     queue_.async_write(
-        *watcher_stream_, std::move(req), "on_range_request/create_watch",
+        *watcher_stream_, std::move(req), "election_observer/create_watcher",
         [this](auto const& fop, bool fok) { this->on_watch_create(fop, fok); });
+  }
+
+  void cancel_watcher() {
+    if (not ops_.async_op_start("election_observer/cancel_watcher")) {
+      return;
+    }
+    etcdserverpb::WatchRequest req;
+    auto& create = *req.mutable_cancel_request();
+    create.set_watch_id(watch_id_);
+    queue_.async_write(
+        *watcher_stream_, std::move(req), "election_observer/cancel_watcher",
+        [this](auto const& fop, bool fok) { this->on_watch_cancel(fop, fok); });
   }
 
   void discover_node_with_lowest_creation_revision() {
@@ -211,18 +231,28 @@ private:
         [this](auto const& fop, bool fok) { this->on_watch_read(fop, fok); });
   }
 
+  void on_watch_cancel(watch_write_op const& op, bool ok) {
+    ops_.async_op_done("election_observer/on_watch_cancel");
+    if (not ok) {
+      // ... the cancel request was canceled: nothing to do here ...
+      return;
+    }
+    // ... if there was a pending read on the watcher that will handle the cancelation, if there was not, then we
+    // are on the path to cleanup() which will cancel the reads anyway ...
+  }
+
   void on_watch_read(watch_read_op const& op, bool ok) {
-    ops_.async_op_done("election_observer/on_watch_create/watch_read");
+    ops_.async_op_done("election_observer/on_watch_read");
     if (not ok) {
       return;
     }
-    if (op.response.canceled()) {
-      return;
-    }
-    if (op.response.compact_revision()) {
+    // ... according to the proto documentation both of these should be treated as cancelations of the watcher ...
+    if (op.response.canceled() or op.response.compact_revision()) {
+      // TODO() - maybe we should restart the watcher if it is canceled by a compact_revision...
       return;
     }
     std::unique_lock<std::mutex> lock(mu_);
+    watch_id_ = op.response.watch_id();
     bool leader_changed = false;
     for (auto const& ev : op.response.events()) {
       if (ev.type() == mvccpb::Event::PUT) {
@@ -236,7 +266,7 @@ private:
     if (leader_changed) {
       call_subscribers(lock);
     }
-    if (not ops_.async_op_start("election_observer/on_watch_read/watch_read")) {
+    if (not ops_.async_op_start("election_observer/on_watch_read")) {
       return;
     }
     queue_.async_read(
@@ -297,6 +327,7 @@ private:
 
 private:
   using subscriptions_type = std::unordered_map<long, subscriber_type>;
+  using participants_type = std::map<std::uint64_t, mvccpb::KeyValue>;
 
   completion_queue_type& queue_;
   mutable std::mutex mu_;
@@ -307,8 +338,8 @@ private:
   std::unique_ptr<etcdserverpb::KV::Stub> kv_stub_;
   std::unique_ptr<etcdserverpb::Watch::Stub> watch_stub_;
   std::shared_ptr<watcher_stream_type> watcher_stream_;
+  long watch_id_;
 
-  using participants_type = std::map<std::uint64_t, mvccpb::KeyValue>;
   participants_type participants_;
 
   async_op_counter ops_;
