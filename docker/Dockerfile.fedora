@@ -78,6 +78,7 @@ COPY gh /var/tmp/build-gee-h/gh
 COPY CMakeLists.txt /var/tmp/build-gee-h
 COPY ext /var/tmp/build-gee-h/ext
 COPY cmake /var/tmp/build-gee-h/cmake
+COPY examples /var/tmp/build-gee-h/examples
 
 # ... build inside a sub-directory, easier to copy the artifacts that way
 WORKDIR /var/tmp/build-gee-h/build
