@@ -26,4 +26,4 @@ exec sudo docker build -t ${IMAGE?}:tip ${cacheargs?} \
     --build-arg CMAKE_FLAGS="${CMAKE_FLAGS}" \
     --build-arg BUILD_EXTRA=${BUILD_EXTRA} \
     --build-arg TRAVIS_JOB_NUMBER=${TRAVIS_JOB_NUMBER} \
-    -f docker/Dockerfile.${DISTRO?} .
+    -f ci/Dockerfile.${DISTRO?} .
