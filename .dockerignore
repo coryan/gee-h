@@ -2,3 +2,4 @@
 build/
 cmake-build-debug/
 doc/html/
+docker-images/
