@@ -381,6 +381,6 @@ TEST(election_observer_impl, early_shutdown) {
   EXPECT_FALSE(observer->has_leader());
 
   EXPECT_CALL(*queue.interceptor().shared_mock, try_cancel()).Times(1);
-  
+
   EXPECT_NO_THROW(observer.reset(nullptr));
 }
