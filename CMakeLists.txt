@@ -122,6 +122,7 @@ add_library(gee_h SHARED
         gh/detail/candidate_state_machine.cpp
         gh/detail/deadline_timer.hpp
         gh/detail/default_grpc_interceptor.hpp
+        gh/detail/election_candidate_impl.hpp
         gh/detail/election_observer_impl.hpp
         gh/detail/grpc_errors.hpp
         gh/detail/grpc_errors.cpp
@@ -135,6 +136,8 @@ add_library(gee_h SHARED
         gh/detail/session_impl.hpp
         gh/detail/session_impl_common.hpp
         gh/detail/session_impl_common.cpp
+        gh/election_candidate.hpp
+        gh/election_candidate.cpp
         gh/election_observer.hpp
         gh/election_observer.cpp
         gh/log.hpp
@@ -162,6 +165,7 @@ set(all_unit_tests
         gh_detail_async_op_counter_ut
         gh_detail_base_completion_queue_ut
         gh_detail_candidate_state_machine_ut
+        gh_detail_election_candidate_impl_ut
         gh_detail_election_observer_impl_ut
         gh_detail_grpc_errors_ut
         gh_detail_mocked_grpc_interceptor_ut
