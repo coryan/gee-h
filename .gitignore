@@ -34,3 +34,4 @@
 cmake-build-debug/
 doc/html/
 build/
+docker-images/
