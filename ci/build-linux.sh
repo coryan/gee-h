@@ -8,7 +8,7 @@ if [ "x${LINUX_BUILD}" != "xyes" ]; then
 fi
 
 IMAGE="cached-${DISTRO?}-${DISTRO_VERSION?}"
-latest_id=$(sudo docker inspect -f '{{ .Id }}' ${IMAGE?}:latest >/dev/null 2>&1 || echo "")
+latest_id=$(sudo docker inspect -f '{{ .Id }}' ${IMAGE?}:latest 2>/dev/null || echo "")
 cacheargs="";
 if [ "x${latest_id}" != "x" ]; then
     cacheargs="--cache-from ${IMAGE?}:latest"
