@@ -7,15 +7,13 @@
 namespace gh {
 namespace detail {
 
-/// Determine the Request and Response parameter for an RPC based on
-/// the Stub signature  - mismatch case.
+/// Determine the Request and Response parameter for an RPC based on the Stub signature - mismatch case.
 template <typename M>
 struct async_rpc_op_requirements {
   using matches = std::false_type;
 };
 
-/// Determine the Request and Response parameter for an RPC based on
-/// the Stub signature  - mismatch case.
+/// Determine the Request and Response parameter for an RPC based on the Stub signature - match case.
 template <typename W, typename R>
 struct async_rpc_op_requirements<std::unique_ptr<grpc::ClientAsyncResponseReader<R>>(
     grpc::ClientContext*, W const&, grpc::CompletionQueue*)> {
@@ -28,8 +26,9 @@ struct async_rpc_op_requirements<std::unique_ptr<grpc::ClientAsyncResponseReader
 /**
  * A wrapper for asynchronous unary operations.
  *
- * Please see jb::etcd::completion_queue::async_rpc for details.
+ * Please see gh::completion_queue::async_rpc for details.
  *
+ * @tparam W the type of the request in the RPC operation.
  * @tparam R the type of the response in the RPC operation.
  */
 template <typename W, typename R>

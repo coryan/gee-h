@@ -9,7 +9,6 @@
 #include <string>
 
 namespace gh {
-
 /**
  * Returns the end of a prefix range.
  *
@@ -23,7 +22,6 @@ namespace gh {
  * @returns the end of the prefix range
  */
 std::string prefix_end(std::string const& prefix);
-
-} // namespace jb
+} // namespace gh
 
 #endif // gh_prefix_end_hpp

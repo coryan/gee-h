@@ -94,8 +94,8 @@ public:
    * auto op = queue.async_rpc("debug string", stub, Echo::Stub::AsyncEcho, [](auto op, bool ok) { });
    * @endcode
    *
-   * The jb::etcd::completion_queue will call the lambda expression you provided.  The @a ok flag indicates if the
-   * operation was canceled.  The @a op parameter will be of type:
+   * In this example, the gh::completion_queue will call the lambda expression  provided.  The @a ok flag will
+   * be false if the operation was canceled.  The @a op parameter will be of type:
    *
    * @code
    * async_op<EchoResponse> const&
@@ -137,7 +137,7 @@ public:
    * @code
    * completion_queue queue = ...;
    * std::unique_ptr<Echo::Stub> client = ...;
-   * auto fut = queue.async_rpc("debug string", stub, Echo::Stub::AsyncEcho, jb::etcd::use_future());
+   * auto fut = queue.async_rpc("debug string", stub, Echo::Stub::AsyncEcho, gh::use_future());
    * // block until completed ..
    * auto result = fut.get();
    * @endcode
@@ -247,9 +247,7 @@ public:
    * @code
    * completion_queue queue = ...;
    * std::unique_ptr<Echo::Stub> client = ...;
-   * auto fut = queue.async_create_rdwr_stream(
-   *     "debug string", stub, Echo::Stub::AsyncEcho,
-   *     jb::etcd::use_future());
+   * auto fut = queue.async_create_rdwr_stream("debug string", stub, Echo::Stub::AsyncEcho, gh::use_future());
    * // block until the result is ready or an exception ...
    * auto result = fut.get();
    * @endcode

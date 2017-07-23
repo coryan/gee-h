@@ -1,7 +1,6 @@
 #include "gh/prefix_end.hpp"
 
 namespace gh {
-
 std::string prefix_end(std::string const& prefix) {
   // ... iterate in reverse order, find the first element (in
   // iteration order) that is not 0xFF, increment it, now we have a
@@ -24,5 +23,4 @@ std::string prefix_end(std::string const& prefix) {
   }
   return range_end;
 }
-
 } // namespace gh

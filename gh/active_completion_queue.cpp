@@ -2,7 +2,6 @@
 #include <gh/log.hpp>
 
 namespace gh {
-
 active_completion_queue::~active_completion_queue() {
   GH_LOG(trace) << "delete active completion queue";
 }
@@ -20,5 +19,4 @@ active_completion_queue::defer_join::~defer_join() {
     thread->join();
   }
 }
-
-} // namespace jb
+} // namespace gh

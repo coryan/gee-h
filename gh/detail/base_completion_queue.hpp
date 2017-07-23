@@ -20,7 +20,7 @@ struct base_completion_queue_test_only;
 /**
  * The base class for the grpc::CompletionQueue wrappers.
  *
- * Refactor code common to all jb::etcd::completion_queue<> template instantiations.
+ * Refactor code common to all gh::completion_queue<> template instantiations.
  */
 class base_completion_queue {
 public:
