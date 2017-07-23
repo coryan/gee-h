@@ -16,10 +16,23 @@ namespace gh {
 namespace detail {
 
 /**
- * Format a gRPC error into a std::ostream.
+ * Create an exception given a gRPC error.
  *
- * This is often converted into an exception, but it is easier to
- * unit tests if separated.
+ * @param where a string to let the user know where the error took place.
+ * @param status the status to format
+ * @param a a list of additional annotations to append (using operator<<) to the end of the exception what() message.
+ * @returns a std::runtime_error with the contents of the status error and any annotations.
+ */
+template <typename Location, typename... Annotations>
+std::runtime_error make_exception(grpc::Status const& status, Location const& where, Annotations&&... a) {
+  std::ostringstream os;
+  os << where << " grpc error: " << status.error_message() << " [" << status.error_code() << "]";
+  detail::append_annotations(os, std::forward<Annotations>(a)...);
+  return std::runtime_error(os.str());
+}
+
+/**
+ * Raise an exception if the grpc::Status indicates there was an error.
  *
  * @param where a string to let the user know where the error took place.
  * @param status the status to format
@@ -31,10 +44,7 @@ void check_grpc_status(grpc::Status const& status, Location const& where, Annota
   if (status.ok()) {
     return;
   }
-  std::ostringstream os;
-  os << where << " grpc error: " << status.error_message() << " [" << status.error_code() << "]";
-  detail::append_annotations(os, std::forward<Annotations>(a)...);
-  throw std::runtime_error(os.str());
+  throw make_exception(status, where, std::forward<Annotations>(a)...);
 }
 
 /**
