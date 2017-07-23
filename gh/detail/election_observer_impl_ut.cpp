@@ -48,10 +48,10 @@ TEST(election_observer_impl, basic) {
   EXPECT_THROW(observer->current_value(), std::exception);
 
   EXPECT_CALL(*queue.interceptor().shared_mock, try_cancel()).WillOnce(Invoke([r = std::ref(pending_read)]() {
-    auto pr = std::move(r.get());
+    auto tr = std::move(r.get());
     ASSERT_FALSE((bool)r.get());
-    ASSERT_TRUE((bool)pr);
-    pr->callback(*pr, false);
+    ASSERT_TRUE((bool)tr);
+    tr->callback(*tr, false);
   }));
 
   EXPECT_NO_THROW(observer.reset(nullptr));
@@ -116,7 +116,7 @@ TEST(election_observer_impl, normal_lifecycle) {
   EXPECT_EQ(observer->current_value(), std::string("abc2000"));
 
   ASSERT_GE(observations.size(), 1UL);
-  auto last_observation = observations.back();
+  auto& last_observation = observations.back();
   ASSERT_EQ(last_observation.first, observer->current_key());
   ASSERT_EQ(last_observation.second, observer->current_value());
   observations.clear(); // ... makes next tests easier ...
@@ -195,10 +195,10 @@ TEST(election_observer_impl, normal_lifecycle) {
   EXPECT_EQ(observer->current_value(), std::string("cde2200"));
 
   EXPECT_CALL(*queue.interceptor().shared_mock, try_cancel()).WillOnce(Invoke([r = std::ref(pending_read)]() {
-    auto pr = std::move(r.get());
+    auto tr = std::move(r.get());
     ASSERT_FALSE((bool)r.get());
-    ASSERT_TRUE((bool)pr);
-    pr->callback(*pr, false);
+    ASSERT_TRUE((bool)tr);
+    tr->callback(*tr, false);
   }));
 
   EXPECT_NO_THROW(observer.reset(nullptr));
@@ -267,7 +267,7 @@ TEST(election_observer_impl, late_subscription) {
   auto token = observer->subscribe(std::move(subscriber));
 
   ASSERT_GE(observations.size(), 1UL);
-  auto last_observation = observations.back();
+  auto& last_observation = observations.back();
   ASSERT_EQ(last_observation.first, observer->current_key());
   ASSERT_EQ(last_observation.second, observer->current_value());
   observations.clear(); // ... makes next tests easier ...
@@ -347,7 +347,7 @@ TEST(election_observer_impl, full_shutdown) {
   EXPECT_EQ(observer->current_value(), std::string("abc2000"));
 
   ASSERT_GE(observations.size(), 1UL);
-  auto last_observation = observations.back();
+  auto& last_observation = observations.back();
   ASSERT_EQ(last_observation.first, observer->current_key());
   ASSERT_EQ(last_observation.second, observer->current_value());
   observations.clear(); // ... makes next tests easier ...

@@ -142,7 +142,6 @@ public:
           *watcher_stream_, std::move(req), "election_candidate/cancel_watcher",
           [this, w](auto op, bool ok) { this->on_watch_cancel(op, ok, w); });
     }
-    queue_.try_cancel_on(*watcher_stream_);
     // The watcher stream was already created, we need to close it before shutting down the completion queue ...
     (void)ops_.async_op_start("election_candidate/writes_done");
     auto writes_done_complete =
@@ -155,6 +154,7 @@ public:
 
     (void)ops_.async_op_start("election_candidate/finish");
     auto finished_complete = queue_.async_finish(*watcher_stream_, "election_candidate/finish", gh::use_future());
+    queue_.try_cancel_on(*watcher_stream_);
     finished_complete.get();
     (void)ops_.async_op_done("election_candidate/finish");
     // ... if there is a pending callback we need to let them know this candidate is not going to be elected ...
@@ -298,7 +298,9 @@ private:
       // ... already shutdown once, nothing to do ...
       return;
     }
-    queue_.try_cancel_on(*watcher_stream_);
+    if (watcher_stream_) {
+      queue_.try_cancel_on(*watcher_stream_);
+    }
     ops_.block_until_all_done();
   }
 

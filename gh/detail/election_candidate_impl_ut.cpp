@@ -3,6 +3,7 @@
 
 #include <gh/completion_queue.hpp>
 #include <gh/detail/mocked_grpc_interceptor.hpp>
+#include <gh/detail/stream_future_status.hpp>
 
 #include <gmock/gmock.h>
 
@@ -11,20 +12,6 @@ namespace {
 using completion_queue_type = gh::completion_queue<gh::detail::mocked_grpc_interceptor>;
 using candidate_type = gh::detail::election_candidate_impl<completion_queue_type>;
 } // anonymous namespace
-
-namespace std {
-std::ostream& operator<<(std::ostream& os, std::future_status x) {
-  switch(x) {
-  case std::future_status::timeout:
-    return os << "[timeout]";
-  case std::future_status::ready:
-    return os << "[ready]";
-  case std::future_status::deferred:
-    return os << "[deferred]";
-  }
-  throw std::runtime_error("unknown std::future_status");
-}
-}
 
 TEST(election_candidate_impl, basic) {
   using namespace std::chrono_literals;

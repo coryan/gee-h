@@ -57,5 +57,15 @@ class Test(unittest.TestCase):
             print ex.output
             self.assertEqual(ex.returncode, 0)
 
+    def test_leader_election(self):
+        try:
+            text = subprocess.check_output(
+                ["gh/leader_election_test"],
+                stderr=subprocess.STDOUT)
+            print text
+        except subprocess.CalledProcessError as ex:
+            print ex.output
+            self.assertEqual(ex.returncode, 0)
+
 if __name__ == '__main__':
     unittest.main()

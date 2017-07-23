@@ -138,6 +138,8 @@ add_library(gee_h SHARED
         gh/election_candidate.cpp
         gh/election_observer.hpp
         gh/election_observer.cpp
+        gh/leader_election.hpp
+        gh/leader_election.cpp
         gh/log.hpp
         gh/log.cpp
         gh/log_severity.hpp
@@ -199,9 +201,11 @@ endforeach()
 add_executable(all_unit_tests ${ut_sources})
 target_link_libraries(all_unit_tests gee_h gmock gtest gtest_main)
 
-# ... an integration test, using the unit test framework to report results ...
+# ... integration tests, using the unit test framework to report results ...
 add_executable(gh_session_test gh/session_test.cpp)
 target_link_libraries(gh_session_test gee_h gmock gtest gtest_main)
+add_executable(gh_leader_election_test gh/leader_election_test.cpp)
+target_link_libraries(gh_leader_election_test gee_h gmock gtest gtest_main)
 
 add_test(NAME gh_integration_tests
         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/gh/integration_tests.py
