@@ -4,7 +4,6 @@
 #include <gh/assert_throw.hpp>
 #include <gh/completion_queue.hpp>
 #include <gh/detail/async_op_counter.hpp>
-#include <gh/detail/candidate_state_machine.hpp>
 #include <gh/detail/grpc_errors.hpp>
 #include <gh/detail/stream_async_ops.hpp>
 #include <gh/election_candidate.hpp>
@@ -26,16 +25,13 @@ public:
   using watcher_stream_type = detail::async_rdwr_stream<etcdserverpb::WatchRequest, etcdserverpb::WatchResponse>;
   using watch_write_op = watcher_stream_type::write_op;
   using watch_read_op = watcher_stream_type::read_op;
-
-  using state = candidate_state;
   //@}
 
-  /// Constructor, non-blocking, calls the callback when elected.
-  template <typename Functor>
+  /// Constructor, all work is delayed until campaign().
   election_candidate_impl(
       completion_queue_type& queue, std::uint64_t lease_id, std::unique_ptr<etcdserverpb::KV::Stub> kv_stub,
       std::unique_ptr<etcdserverpb::Watch::Stub> watch_stub, std::string const& election_name,
-      std::string const& candidate_value, Functor&& elected_callback)
+      std::string const& candidate_value)
       : mu_()
       , queue_(queue)
       , lease_id_(lease_id)
@@ -49,8 +45,8 @@ public:
       , creation_revision_(0)
       , current_watches_()
       , watched_keys_()
-      , campaign_callback_()
-      , state_machine_()
+      , elected_(false)
+        , promise_()
       , ops_() {
     election_prefix_ = election_name_ + "/";
     std::ostringstream os;
@@ -72,6 +68,10 @@ public:
     cleanup();
   }
 
+  virtual bool elected() const override {
+    return elected_.load();
+  }
+
   virtual std::string const& key() const override {
     return candidate_key_;
   }
@@ -80,7 +80,7 @@ public:
     return candidate_value_;
   }
 
-  std::uint64_t creation_revision() const override {
+  std::int64_t creation_revision() const override {
     return creation_revision_;
   }
 
@@ -89,6 +89,9 @@ public:
   }
 
   void proclaim(std::string const& new_value) override {
+    if (ops_.in_shutdown()) {
+      throw std::runtime_error("proclaim() called after election candidate was shutdown.");
+    }
     GH_LOG(trace) << log_header("") << " proclaim(" << new_value << ")";
     std::string copy(new_value);
     etcdserverpb::RequestOp failure_op;
@@ -103,23 +106,32 @@ public:
     throw std::runtime_error(os.str());
   }
 
-  void startup() override {
-    preamble();
+  std::shared_future<bool> campaign() override {
+    if (ops_.in_shutdown()) {
+      throw std::runtime_error("campaign() called after election candidate was shutdown.");
+    }
+    auto fut = promise_.get_future().share();
+    campaign_impl();
+    return fut;
   }
 
   void resign() override {
-    if (not state_machine_.change_state("resign() begin", state::resigning)) {
-      return;
+    if (ops_.in_shutdown()) {
+      throw std::runtime_error("resign() called after election candidate was shutdown.");
     }
     std::set<std::uint64_t> watches;
     {
       std::lock_guard<std::mutex> lock(mu_);
       watches = std::move(current_watches_);
+      // ... if there is any pending operation we need to cancel them and wait for them to finish ...
+      if (not watcher_stream_) {
+        return;
+      }
     }
     // ... cancel all the watchers too ...
     for (auto w : watches) {
       GH_LOG(trace) << log_header(" cancel watch") << " = " << w;
-      if (not ops_.async_op_start("cancel watch")) {
+      if (not ops_.async_op_start("election_candidate/cancel_watcher")) {
         return;
       }
       etcdserverpb::WatchRequest req;
@@ -127,40 +139,68 @@ public:
       cancel.set_watch_id(w);
 
       queue_.async_write(
-          *watcher_stream_, std::move(req), "leader_election_candidate/cancel_watcher",
+          *watcher_stream_, std::move(req), "election_candidate/cancel_watcher",
           [this, w](auto op, bool ok) { this->on_watch_cancel(op, ok, w); });
     }
-    // ... block until all pending operations complete ...
-    ops_.block_until_all_done();
-    // ... if there is a pending callback we need to let them know the
-    // election failed ...
-    make_callback(false);
-    // ... now we are really done with remote resources ...
-    state_machine_.change_state("resign() end", state::resigned);
+    queue_.try_cancel_on(*watcher_stream_);
+    // The watcher stream was already created, we need to close it before shutting down the completion queue ...
+    (void)ops_.async_op_start("election_candidate/writes_done");
+    auto writes_done_complete =
+        queue_.async_writes_done(*watcher_stream_, "election_candidate/writes_done", gh::use_future());
+
+    // ... block until it closes ...
+    writes_done_complete.get();
+    (void)ops_.async_op_done("election_candidate/writes_done");
+    GH_LOG(trace) << log_header("") << "  writes done completed";
+
+    (void)ops_.async_op_start("election_candidate/finish");
+    auto finished_complete = queue_.async_finish(*watcher_stream_, "election_candidate/finish", gh::use_future());
+    finished_complete.get();
+    (void)ops_.async_op_done("election_candidate/finish");
+    // ... if there is a pending callback we need to let them know this candidate is not going to be elected ...
+    election_result(false);
   }
 
 private:
+  /**
+   * Refactor template code via std::function
+   *
+   * The main "interface" is the campaing() template member functions, but we loath duplicating that much code here,
+   * so refactor with a std::function<>.  The cost of such functions is higher, but leader election is not a fast
+   * operation.
+   */
+  void campaign_impl() {
+    GH_LOG(trace) << log_header("") << "  kicking off campaign";
+    // ... create a watcher stream ...
+    create_watch_stream();
+    // ... the node in the etcd server that represents this candidate ...
+    create_node();
+    // ... find out who is the predecessor, this operation returns, and asynchronously watches the predecessor until
+    // this candidate becomes the leader ...
+    query_predecessor();
+  }
+
+  /**
+   * Create a watcher stream.
+   */
+  void create_watch_stream() {
+    auto fut = queue_.async_create_rdwr_stream(
+        watch_stub_.get(), &etcdserverpb::Watch::Stub::AsyncWatch, "election_candidate/watch", gh::use_future());
+    watcher_stream_ = fut.get();
+  }
+
   /**
    * Runs the operations before starting the election campaign.
    *
    * This function can throw exceptions which means the campaign was never even started.
    */
-  void preamble() try {
-    // ... no real need to grab a mutex here.  The object is not fully
-    // constructed, it should not be used by more than one thread ...
-    state_machine_.change_state("preamble()", state::connecting);
-
-    auto fut = queue_.async_create_rdwr_stream(
-        watch_stub_.get(), &etcdserverpb::Watch::Stub::AsyncWatch, "leader_election_candidate/watch", gh::use_future());
-    watcher_stream_ = fut.get();
-    state_machine_.change_state("preamble()", state::querying_predecessor);
-
-    // ... we need to create a node to represent this candidate in
-    // the leader election.  We do this with a test-and-set
-    // operation.  The test is "does this key have creation_version ==
-    // 0", which is really equivalent to "does this key exist",
-    // because any key actually created would have a higher creation
-    // version ...
+  void create_node() {
+    if (ops_.in_shutdown()) {
+      throw std::runtime_error("create_node() called after shutdown()");
+    }
+    // ... we need to create a node to represent this candidate in the leader election.  We do this with a test-and-set
+    // operation.  The test is "does this key have creation_version == 0", which is really equivalent to "does this
+    // key exist", because any key actually created would have a higher creation version ...
     etcdserverpb::TxnRequest req;
     auto& cmp = *req.add_compare();
     cmp.set_key(key());
@@ -173,32 +213,27 @@ private:
     on_success.set_key(key());
     on_success.set_value(value());
     on_success.set_lease(lease_id());
-    // ... if the key is there, we are going to fetch its current
-    // value, there will be some fun action with that ...
+    // ... if the key is there, we are going to fetch its current value, there will be some fun action with that ...
     auto& on_failure = *req.add_failure()->mutable_request_range();
     on_failure.set_key(key());
 
     // ... execute the transaction in etcd ...
-    etcdserverpb::TxnResponse resp = commit(req, "leader_election/commit/create_node");
+    etcdserverpb::TxnResponse resp = commit(req, "election_candidate/create_node");
 
-    // ... regardless of which branch of the test-and-set operation
-    // pass, we now have fetched the candidate revision value ..
+    // ... regardless of which branch of the test-and-set operation pass, we now have fetched the candidate revision
+    // value ..
     creation_revision_ = resp.header().revision();
 
     if (not resp.succeeded()) {
-      // ... the key already existed, possibly because a previous
-      // instance of the program participated in the election and etcd
-      // did not had time to expire the key.  We need to use the
-      // previous creation_revision and save our new candidate_value
-      // ...
+      // ... the key already existed, possibly because a previous instance of the program participated in the
+      // election and etcd did not had time to expire the key.  We need to use the previous creation_revision and
+      // save our new candidate_value ...
       GH_ASSERT_THROW(resp.responses().size() == 1);
-      GH_ASSERT_THROW(resp.responses()[0].response_range().kvs().size() == 1U);
-      auto const& kv = resp.responses()[0].response_range().kvs()[0];
+      GH_ASSERT_THROW(resp.responses(0).response_range().kvs().size() == 1U);
+      auto const& kv = resp.responses(0).response_range().kvs(0);
       creation_revision_ = kv.create_revision();
-      // ... if the value is the same, we can avoid a round-trip
-      // request to the server ...
+      // ... if the value is the same, we can avoid a round-trip request to the server ...
       if (kv.value() != value()) {
-        state_machine_.change_state("preamble()", state::updating_node);
         // ... too bad, need to publish again *and* we need to delete
         // the key if the publication fails ...
         etcdserverpb::RequestOp failure_op;
@@ -216,11 +251,40 @@ private:
         }
       }
     }
-    state_machine_.change_state("preamble()", state::node_created);
-  } catch (std::exception const& ex) {
-    GH_LOG(trace) << log_header("") << " std::exception raised in preamble: " << ex.what();
-    shutdown();
-    throw;
+  }
+
+  /// Find the predecessor from this node, if any, and setup a watcher on it ...
+  void query_predecessor() {
+    if (ops_.in_shutdown()) {
+      GH_LOG(info) << "query_predecessor() called after candidate has shutdown";
+      return election_result(false);
+    }
+    // ... we want to wait on a single key, waiting on more would create thundering herd problems.  To win the
+    // election this candidate needs to have the smallest creation_revision amongst all the candidates within the
+    // election.  So we wait on the immediate predecessor of the current candidate sorted by creation_revision.
+    // That is found by:
+    etcdserverpb::RangeRequest req;
+    //   - Search all the keys that have the same prefix (that is the election_prefix_)
+    req.set_key(election_prefix_);
+    //   - Prefix searches are range searches where the end value is 1 bit higher than the initial value.
+    req.set_range_end(prefix_end(election_prefix_));
+    //   - Limit those results to the keys that have creation_revision lower than this candidate's creation_revision key
+    req.set_max_create_revision(creation_revision_ - 1);
+    //   - Sort those results in descending order by creation_revision.
+    req.set_sort_order(etcdserverpb::RangeRequest::DESCEND);
+    req.set_sort_target(etcdserverpb::RangeRequest::CREATE);
+    //   - Only fetch the first of those results.
+    req.set_limit(1);
+
+    // ... after all that filtering you are left with 0 or 1 keys.  If there is 1 key, we need to setup a watcher and
+    // wait until the key is deleted.  If there are 0 keys, we won the campaign, and we are done.  That won't happen
+    // in this function, the code is asynchronous, and broken over many functions, but the context is useful to
+    // understand what is happening ...
+
+    ops_.async_op_start("election_candidate/query_predecessor");
+    queue_.async_rpc(
+        kv_stub_.get(), &etcdserverpb::KV::Stub::AsyncRange, std::move(req), "election_candidate/query_predecessor",
+        [this](auto const& op, bool ok) { this->on_range_request(op, ok); });
   }
 
   /**
@@ -229,103 +293,16 @@ private:
    * That requires terminating any pending operations, or the completion queue calls abort().
    */
   void cleanup() {
-    queue_.try_cancel_on(*watcher_stream_);
-    ops_.shutdown();
-    ops_.block_until_all_done();
-  }
-
-  void shutdown() {
-    if (not state_machine_.change_state("shutdown()", state::shutting_down)) {
+    GH_LOG(trace) << log_header("") << "  cleanup";
+    if (ops_.in_shutdown()) {
+      // ... already shutdown once, nothing to do ...
       return;
     }
-    GH_LOG(trace) << log_header("") << "  shutdown";
-    // ... if there is a pending range request we need to block on it ...
+    queue_.try_cancel_on(*watcher_stream_);
     ops_.block_until_all_done();
-    if (watcher_stream_) {
-      // The watcher stream was already created, we need to close it before shutting down the completion queue ...
-      (void)ops_.async_op_start("writes done");
-      auto writes_done_complete =
-          queue_.async_writes_done(*watcher_stream_, "election_candidate/shutdown/writes_done", gh::use_future());
-
-      // ... block until it closes ...
-      writes_done_complete.get();
-      GH_LOG(trace) << log_header("") << "  writes done completed";
-
-      (void)ops_.async_op_start("finish");
-      auto finished_complete =
-          queue_.async_finish(*watcher_stream_, "election_candidate/shutdown/finish", gh::use_future());
-      GH_LOG(trace) << log_header("") << "  finish scheduled";
-      // TODO() - this is a workaround, the finish() call does not seem
-      // to terminate for me ...
-      if (finished_complete.wait_for(std::chrono::milliseconds(200)) == std::future_status::timeout) {
-        GH_LOG(info) << log_header("") << "  timeout on Finish() call";
-        ops_.async_op_done("on_finish() - forced");
-      }
-    }
-    (void)state_machine_.change_state("shutdown()", state::shutdown);
   }
 
-  /// Kick-off a campaign and call a functor when elected
-  template <typename Functor>
-  void campaign(Functor&& callback) {
-    campaign_impl(std::function<void(bool)>(std::move(callback)));
-  }
-
-  /**
-   * Refactor template code via std::function
-   *
-   * The main "interface" is the campaing() template member functions, but we loath duplicating that much code here,
-   * so refactor with a std::function<>.  The cost of such functions is higher, but leader election is not a fast
-   * operation.
-   */
-  void campaign_impl(std::function<void(bool)>&& callback) {
-    GH_LOG(trace) << log_header("") << "  kicking off campaign";
-    // First save the callback ...
-    {
-      std::lock_guard<std::mutex> lock(mu_);
-      GH_ASSERT_THROW(bool(campaign_callback_) == false);
-      campaign_callback_ = std::move(callback);
-    }
-    // ... we want to wait on a single key, waiting on more would
-    // create thundering herd problems.  To win the election this
-    // candidate needs to have the smallest creation_revision
-    // amongst all the candidates within the election.
-
-    // So we wait on the immediate predecessor of the current
-    // candidate sorted by creation_revision.  That is found by:
-    etcdserverpb::RangeRequest req;
-    //   - Search all the keys that have the same prefix (that is the
-    //     election_prefix_
-    req.set_key(election_prefix_);
-    //   - Prefix searches are range searches where the end value is 1
-    //     bit higher than the initial value.
-    req.set_range_end(prefix_end(election_prefix_));
-    //   - Limit those results to the keys that have creation_revision
-    //     lower than this candidate's creation_revision key
-    req.set_max_create_revision(creation_revision_ - 1);
-    //   - Sort those results in descending order by
-    //     creation_revision.
-    req.set_sort_order(etcdserverpb::RangeRequest::DESCEND);
-    req.set_sort_target(etcdserverpb::RangeRequest::CREATE);
-    //   - Only fetch the first of those results.
-    req.set_limit(1);
-
-    // ... after all that filtering you are left with 0 or 1 keys.
-    // If there is 1 key, we need to setup a watcher and wait until
-    // the key is deleted.
-    // If there are 0 keys, we won the campaign, and we are done.
-    // That won't happen in this function, the code is asynchronous,
-    // and broken over many functions, but the context is useful to
-    // understand what is happening ...
-
-    (void)state_machine_.change_state("campaign_impl()", state::querying_predecessor);
-    ops_.async_op_start("range request");
-    queue_.async_rpc(
-        kv_stub_.get(), &etcdserverpb::KV::Stub::AsyncRange, std::move(req), "election_candidate/campaign/range",
-        [this](auto const& op, bool ok) { this->on_range_request(op, ok); });
-  }
-
-  /// Refactor code common to proclaim() and preamble()
+  /// Refactor code common to proclaim() and create_node()
   etcdserverpb::TxnResponse publish_value(std::string const& value, etcdserverpb::RequestOp const& failure_op) {
     GH_LOG(trace) << log_header("") << " publish_value()";
     etcdserverpb::TxnRequest req;
@@ -342,7 +319,7 @@ private:
       *req.add_failure() = failure_op;
     }
 
-    return commit(req, "leader_election/publish_value");
+    return commit(req, "election_candidate/publish_value");
   }
 
   /// Refactor code to perform a Txn() request.
@@ -356,26 +333,26 @@ private:
   /// Called when the Range() operation in the kv_stub completes.
   void on_range_request(async_rpc_op<etcdserverpb::RangeRequest, etcdserverpb::RangeResponse> const& op, bool ok) {
     if (not ok) {
-      make_callback(false);
+      return election_result(false);
     }
-    ops_.async_op_done("on_range_request()");
+    ops_.async_op_done("election_candidate/query_predecessor");
     check_grpc_status(op.status, log_header("on_range_request()"), ", response=", print_to_stream(op.response));
 
     for (auto const& kv : op.response.kvs()) {
       // ... we need to capture the key and revision of the result, so
       // we can then start a Watch starting from that revision ...
 
-      if (not ops_.async_op_start("create watch")) {
+      if (not ops_.async_op_start("election_candidate/on_range_request/watch")) {
         return;
       }
-      (void)state_machine_.change_state("on_range_request()", state::waiting_for_watcher_read);
       GH_LOG(trace) << log_header("") << "  create watcher ... k=" << kv.key();
       watched_keys_.insert(kv.key());
 
       etcdserverpb::WatchRequest req;
       auto& create = *req.mutable_create_request();
       create.set_key(kv.key());
-      create.set_start_revision(op.response.header().revision() - 1);
+      create.set_start_revision(op.response.header().revision());
+      create.set_prev_kv(true);
 
       queue_.async_write(*watcher_stream_, std::move(req), "election_candidate/on_range_request/watch", [
         this, key = kv.key(), revision = op.response.header().revision()
@@ -386,12 +363,12 @@ private:
 
   /// Called when a Write() operation that creates a watcher completes.
   void on_watch_create(watch_write_op const& op, bool ok, std::string const& wkey, std::uint64_t wrevision) {
-    ops_.async_op_done("on_watch_create()");
+    ops_.async_op_done("election_candidate/on_range_request/watch");
     if (not ok) {
       GH_LOG(trace) << log_header("on_watch_create(.., false) wkey=") << wkey;
       return;
     }
-    if (not ops_.async_op_start("read watch")) {
+    if (not ops_.async_op_start("election_candidate/on_watch_create/watch")) {
       return;
     }
 
@@ -403,12 +380,12 @@ private:
   /// Called when a Write() operation that cancels a watcher completes.
   void on_watch_cancel(watch_write_op const& op, bool ok, std::uint64_t watched_id) {
     // ... there should be a Read() pending already ...
-    ops_.async_op_done("on_watch_cancel()");
+    ops_.async_op_done("election_candidate/cancel_watcher");
   }
 
   /// Called when a Read() operation in the watcher stream completes.
   void on_watch_read(watch_read_op const& op, bool ok, std::string const& wkey, std::uint64_t wrevision) {
-    ops_.async_op_done("on_watch_read()");
+    ops_.async_op_done("election_candidate/*/read");
     if (not ok) {
       GH_LOG(trace) << log_header("on_watch_read(.., false) wkey=") << wkey;
       return;
@@ -427,39 +404,28 @@ private:
       if (ev.type() != mvccpb::Event::DELETE) {
         continue;
       }
-      // ... remove that key from the set of keys we are waiting to be
-      // deleted ...
-      watched_keys_.erase(ev.kv().key());
+      // ... remove that key from the set of keys we are waiting to be deleted ...
+      watched_keys_.erase(ev.prev_kv().key());
     }
     check_election_over_maybe();
-    // ... unless the watcher was canceled we should continue to read
-    // from it ...
+    // ... unless the watcher was canceled we should continue to read from it ...
     if (op.response.canceled()) {
       current_watches_.erase(op.response.watch_id());
       return;
     }
     if (op.response.compact_revision()) {
-      // TODO() - if I am reading the documentation correctly, this
-      // means the watcher was cancelled, but the data may (or may
-      // not) still be there.  We need to worry about the case where
-      // the candidate figures out the key to watch.  Then it goes
-      // to sleep, or gets rescheduled, then the key is deleted
-      // and etcd compacted.  And then the client starts watching.
-      //
-      // I am not sure this is a problem, but it might be.
-      //
       GH_LOG(info) << log_header("") << " watcher cancelled with compact_revision=" << op.response.compact_revision()
                    << ", wkey=" << wkey << ", revision=" << wrevision << ", reason=" << op.response.cancel_reason()
                    << ", watch_id=" << op.response.watch_id();
-      std::lock_guard<std::mutex> lock(mu_);
-      current_watches_.erase(op.response.watch_id());
-      return;
-    }
-    if (not state_machine_.change_state("shutdown()", state::shutdown)) {
+      {
+        std::lock_guard<std::mutex> lock(mu_);
+        current_watches_.erase(op.response.watch_id());
+      }
+      query_predecessor();
       return;
     }
     // ... the watcher was not canceled, so try reading again ...
-    if (not ops_.async_op_start("read watch / followup")) {
+    if (not ops_.async_op_start("election_candidate/on_watch_read/read")) {
       return;
     }
 
@@ -472,35 +438,32 @@ private:
   void check_election_over_maybe() {
     // ... do not worry about changes without a lock if it is positive then a future Read() will decrement it and we
     // will check again ...
-
     std::unique_lock<std::mutex> lock(mu_);
     if (not watched_keys_.empty()) {
       return;
     }
     lock.unlock();
     GH_LOG(trace) << log_header("") << " election completed";
-    state_machine_.change_state("check_election_over()", state::waiting_for_watcher_read);
-    make_callback(true);
+    election_result(true);
   }
 
   // Invoke the callback, notice that the callback is invoked only once.
-  void make_callback(bool result) {
-    std::function<void(bool)> callback;
-    {
-      std::lock_guard<std::mutex> lock(mu_);
-      callback = std::move(campaign_callback_);
+  void election_result(bool result) {
+    GH_LOG(trace) << log_header("election_result() ") << std::boolalpha << result;
+    elected_.store(result);
+    try {
+      promise_.set_value(result);
+    } catch(std::future_error const& ex) {
+      // ... ignore already satisfied errors ...
+      if (ex.code() != std::future_errc::promise_already_satisfied) {
+        throw;
+      }
     }
-    if (not callback) {
-      GH_LOG(trace) << log_header("") << " no callback present";
-      return;
-    }
-    callback(result);
-    GH_LOG(trace) << log_header("") << "  made callback";
   }
 
   std::string log_header(char const* log) const {
     std::ostringstream os;
-    os << key() << " " << state_machine_.current() << " " << log;
+    os << key() << " " << log;
     return os.str();
   }
 
@@ -516,14 +479,14 @@ private:
   std::string election_prefix_;
   std::string candidate_value_;
   std::string candidate_key_;
-  std::uint64_t creation_revision_;
+  std::int64_t creation_revision_;
 
   std::set<std::uint64_t> current_watches_;
   std::set<std::string> watched_keys_;
 
-  std::function<void(bool)> campaign_callback_;
+  std::atomic<bool> elected_;
+  std::promise<bool> promise_;
 
-  candidate_state_machine state_machine_;
   async_op_counter ops_;
 };
 

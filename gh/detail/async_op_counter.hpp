@@ -39,6 +39,11 @@ public:
     shutdown_ = true;
   }
 
+  bool in_shutdown() const {
+    std::lock_guard<std::mutex> lock(mu_);
+    return shutdown_;
+  }
+
   /**
    * Increment the count of pending asynchronous operations.
    *
@@ -53,7 +58,7 @@ public:
   bool async_op_start(Annotations&&... a) {
     GH_LOGGER_DECL(info, gh::log::instance(), logger);
     if (logger) {
-      append_annotations(logger.get(), "async_op_start(): ", std::forward<Annotations>(a)...);
+      append_annotations(logger.get(), "async_op_start(): ", pending_, " ", std::forward<Annotations>(a)...);
       logger.write_to(gh::log::instance());
     }
     return add_op();
@@ -72,7 +77,7 @@ public:
   void async_op_done(Annotations&&... a) {
     GH_LOGGER_DECL(info, gh::log::instance(), logger);
     if (logger) {
-      append_annotations(logger.get(), "async_op_done(): ", std::forward<Annotations>(a)...);
+      append_annotations(logger.get(), "async_op_done(): ", pending_, " ", std::forward<Annotations>(a)...);
       logger.write_to(gh::log::instance());
     }
     return del_op();

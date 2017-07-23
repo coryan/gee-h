@@ -118,8 +118,6 @@ add_library(gee_h SHARED
         gh/detail/base_async_op.hpp
         gh/detail/base_completion_queue.hpp
         gh/detail/base_completion_queue.cpp
-        gh/detail/candidate_state_machine.hpp
-        gh/detail/candidate_state_machine.cpp
         gh/detail/deadline_timer.hpp
         gh/detail/default_grpc_interceptor.hpp
         gh/detail/election_candidate_impl.hpp
@@ -158,6 +156,8 @@ add_executable(observe_election examples/observe_election.cpp)
 target_link_libraries(observe_election gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
 add_executable(watcher_and_compaction examples/watcher_and_compaction.cpp)
 target_link_libraries(watcher_and_compaction gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
+add_executable(join_election examples/join_election.cpp)
+target_link_libraries(join_election gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
 
 # ... all the unit tests, we setup the targets and dependencies in a loop ...
 set(all_unit_tests
@@ -166,7 +166,6 @@ set(all_unit_tests
         gh_completion_queue_ut
         gh_detail_async_op_counter_ut
         gh_detail_base_completion_queue_ut
-        gh_detail_candidate_state_machine_ut
         gh_detail_election_candidate_impl_ut
         gh_detail_election_observer_impl_ut
         gh_detail_grpc_errors_ut

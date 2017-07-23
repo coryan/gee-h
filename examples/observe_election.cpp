@@ -7,19 +7,20 @@ namespace {
 using observer_type = gh::detail::election_observer_impl<gh::completion_queue<>>;
 
 bool interrupt = false;
-extern "C" void sighdlr(int sig) {
+extern "C" void signal_handler(int sig) {
   interrupt = true;
 }
 } // anonymous namespace
 
 int main(int argc, char* argv[]) try {
-  if (argc != 2) {
-    std::cerr << "Usage: " << argv[0] << " <election-name>" << std::endl;
+  if (argc != 2 and argc != 3) {
+    std::cerr << "Usage: " << argv[0] << " <prefix> [etcd-address]" << std::endl;
     return 1;
   }
-  char const* election_name = argv[1];
+  std::string election_name = argv[1];
+  char const* etcd_address = argc == 2 ? "localhost:2379" : argv[2];
 
-  auto etcd_channel = grpc::CreateChannel("localhost:2379", grpc::InsecureChannelCredentials());
+  auto etcd_channel = grpc::CreateChannel(etcd_address, grpc::InsecureChannelCredentials());
 
   gh::log::instance().add_sink(
       gh::make_log_sink([](gh::severity sev, std::string&& x) { std::cerr << x << std::endl; }));
@@ -40,8 +41,8 @@ int main(int argc, char* argv[]) try {
   election_observer->startup();
 
   // ... block here until a signal is received ...
-  std::signal(SIGINT, &sighdlr);
-  std::signal(SIGTERM, &sighdlr);
+  std::signal(SIGINT, &signal_handler);
+  std::signal(SIGTERM, &signal_handler);
   using namespace std::chrono_literals;
   while (not interrupt) {
     std::this_thread::sleep_for(20ms);
