@@ -15,7 +15,8 @@ session_impl_common::session_impl_common(
     , lease_id_(lease_id)
     , desired_TTL_(desired_TTL)
     , actual_TTL_(desired_TTL)
-    , current_timer_() {
+    , current_timer_()
+    , ops_() {
 }
 
 } // namespace detail

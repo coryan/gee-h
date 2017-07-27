@@ -1,6 +1,7 @@
 #ifndef gh_detail_session_impl_common_hpp
 #define gh_detail_session_impl_common_hpp
 
+#include <gh/detail/async_op_counter.hpp>
 #include <gh/detail/deadline_timer.hpp>
 #include <gh/detail/session_state_machine.hpp>
 #include <gh/detail/stream_async_ops.hpp>
@@ -75,6 +76,8 @@ protected:
 
   /// The current timer, can be null when waiting for a KeepAlive response.
   std::shared_ptr<detail::deadline_timer> current_timer_;
+
+  async_op_counter ops_;
 };
 
 } // namespace detail

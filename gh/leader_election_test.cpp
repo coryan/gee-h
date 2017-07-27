@@ -8,6 +8,7 @@ namespace {
 using election_session_type = gh::detail::session_impl<gh::completion_queue<>>;
 }
 
+#if 0
 /**
  * @test Verify that one can create, and delete a election participant.
  */
@@ -38,9 +39,14 @@ TEST(leader_election, basic) {
     EXPECT_GT(tested.creation_revision(), 0);
     EXPECT_GT(tested.lease_id(), 0U);
   }
-  EXPECT_TRUE(true) << "destructed participant, revoking session leases";
-  election_session.revoke();
+  EXPECT_TRUE(true) << "destructed participant, revoking auxiliary session leases";
+  try {
+    election_session.revoke();
+  } catch(std::exception const& ex) {
+    EXPECT_TRUE(false) << "exception raised in election_session.revoke(): " << ex.what();
+  }
 }
+#endif // 0
 
 /**
  * @test Verify that an election participant can become the leader.
@@ -140,8 +146,7 @@ TEST(leader_election, abort) {
   EXPECT_TRUE(true) << "b::resign";
   participant_b.resign();
 
-  // ... if future_b is not ready the next call will block, so we make
-  // a hard requirement ...
+  // ... if future_c is not ready the next call will block, so we make a hard requirement ...
   ASSERT_EQ(std::future_status::ready, future_b.wait_for(0ms));
   EXPECT_EQ(future_b.get(), false);
 
