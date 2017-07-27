@@ -134,6 +134,7 @@ add_library(gee_h SHARED
         gh/detail/session_impl.hpp
         gh/detail/session_impl_common.hpp
         gh/detail/session_impl_common.cpp
+        gh/detail/stream_future_status.hpp
         gh/election_candidate.hpp
         gh/election_candidate.cpp
         gh/election_observer.hpp
