@@ -57,7 +57,7 @@ class Test(unittest.TestCase):
             print ex.output
             self.assertEqual(ex.returncode, 0)
 
-    def test_leader_election(self):
+    def disabled_test_leader_election(self):
         try:
             text = subprocess.check_output(
                 ["gh/leader_election_test"],
