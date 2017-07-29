@@ -1,3 +1,4 @@
+#define GH_MIN_SEVERITY trace
 #include "gh/detail/session_impl.hpp"
 #include <gh/detail/mocked_grpc_interceptor.hpp>
 
@@ -14,6 +15,8 @@ void prepare_mocks_common(completion_queue_type& queue);
  * @test Verify that gh::detail::session_impl works in the simple case.
  */
 TEST(session_impl, basic) {
+  // gh::log::instance().add_sink(
+  //    gh::make_log_sink([](gh::severity sev, std::string&& msg) { std::cout << msg << std::endl; }));
   using namespace std::chrono_literals;
   using namespace gh::detail;
 
@@ -57,6 +60,14 @@ TEST(session_impl, basic) {
   auto session = std::make_unique<session_type>(queue, std::unique_ptr<etcdserverpb::Lease::Stub>(), 5000ms);
   EXPECT_EQ(session->lease_id(), 1000UL);
   EXPECT_EQ(session->actual_TTL().count(), 42000);
+
+  // ... we hijack this operation to simulate the timer cancel ...
+  EXPECT_CALL(*queue.interceptor().shared_mock, try_cancel()).WillOnce(Invoke([r = std::ref(pending_timer)]() {
+    auto pr = std::move(r.get());
+    ASSERT_FALSE((bool)r.get());
+    ASSERT_TRUE((bool)pr);
+    pr->callback(*pr, false);
+  }));
   EXPECT_NO_THROW(session.reset(nullptr));
 }
 
@@ -94,15 +105,17 @@ TEST(session_impl, lease_error) {
     return op->name == "session/set_timer/ttl_refresh";
   }))).Times(0);
 
+  EXPECT_CALL(*queue.interceptor().shared_mock, try_cancel()).Times(1);
+
   std::unique_ptr<session_type> s;
   EXPECT_THROW(
       s = std::make_unique<session_type>(queue, std::unique_ptr<etcdserverpb::Lease::Stub>(), 5000ms), std::exception);
   EXPECT_FALSE((bool)s);
+
 }
 
 /**
- * @test Verify that gh::detail::session_impl works when the
- * lease fails to be acquired.
+ * @test Verify that gh::detail::session_impl works when the lease fails to be acquired.
  */
 TEST(session_impl, lease_unusual_exception) {
   using namespace std::chrono_literals;
@@ -121,6 +134,7 @@ TEST(session_impl, lease_unusual_exception) {
   EXPECT_CALL(*queue.interceptor().shared_mock, make_deadline_timer(Truly([](auto op) {
     return op->name == "session/set_timer/ttl_refresh";
   }))).Times(0);
+  EXPECT_CALL(*queue.interceptor().shared_mock, try_cancel()).Times(1);
 
   std::unique_ptr<session_type> s;
   EXPECT_THROW(
@@ -217,6 +231,18 @@ TEST(session_impl, full_lifecycle) {
   // ... we should still be connected ...
   ASSERT_TRUE(session->is_active());
 
+  // ... we hijack the lease_revoke operation to simulate the timer cancel ...
+  EXPECT_CALL(*queue.interceptor().shared_mock, async_rpc(Truly([](auto op) {
+    return op->name == "session/revoke/lease_revoke";
+  }))).WillOnce(Invoke([ t = std::ref(pending_timer), &session ](auto bop) {
+    auto pr = std::move(t.get());
+    ASSERT_FALSE((bool)t.get());
+    ASSERT_TRUE((bool)pr);
+    pr->callback(*pr, false);
+
+    bop->callback(*bop, true);
+  }));
+
   // ... okay, after two cycles let's revoke the lease ...
   session->revoke();
   ASSERT_FALSE(session->is_active());
@@ -283,7 +309,7 @@ TEST(session_impl, race_timer) {
     ASSERT_TRUE(op != nullptr);
     // ... fire the timer, which should not create a new timer as it usual does ...
     auto p = std::move(t.get());
-    p->callback(*p, true);
+    p->callback(*p, false);
     // ... the timer should not reconnect ...
     ASSERT_FALSE((bool)t.get());
     bop->callback(*bop, true);

@@ -110,6 +110,30 @@ private:
   bool shutdown_;
 };
 
+/**
+ * Helper class to increment/decrement the counter in operations that block using gh::use_future().
+ */
+class async_op_tracer {
+public:
+  async_op_tracer(async_op_counter& counter, char const* name)
+      : counter_(counter)
+      , name_(name) {
+    counter_.async_op_start(name_);
+  }
+  ~async_op_tracer() {
+    counter_.async_op_done(name_);
+  }
+
+  async_op_tracer(async_op_tracer&&) = delete;
+  async_op_tracer& operator=(async_op_tracer&&) = delete;
+  async_op_tracer(async_op_tracer const&) = delete;
+  async_op_tracer& operator=(async_op_tracer const&) = delete;
+
+private:
+  async_op_counter& counter_;
+  char const* name_;
+};
+
 } // namespace detail
 } // namespace gh
 

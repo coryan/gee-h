@@ -62,29 +62,27 @@ public:
     }
 
     // ... here we just block, we could make this asynchronous, but really there is no reason to ...
-    etcdserverpb::LeaseRevokeRequest req;
-    req.set_id(lease_id_);
-    ops_.async_op_start("session/revoke/lease_revoke");
-    auto lfut = queue_.async_rpc(
-        lease_client_.get(), &etcdserverpb::Lease::Stub::AsyncLeaseRevoke, std::move(req),
-        "session/revoke/lease_revoke", gh::use_future());
-    auto resp = lfut.get();
-    ops_.async_op_done("session/revoke/lease_revoke");
-    state_machine_.change_state("revoke()", session_state::revoked);
-
+    {
+      etcdserverpb::LeaseRevokeRequest req;
+      req.set_id(lease_id_);
+      async_op_tracer lease_revoke_trace(ops_, "session/revoke/lease_revoke");
+      auto lfut = queue_.async_rpc(
+          lease_client_.get(), &etcdserverpb::Lease::Stub::AsyncLeaseRevoke, std::move(req),
+          "session/revoke/lease_revoke", gh::use_future());
+      auto resp = lfut.get();
+      state_machine_.change_state("revoke()", session_state::revoked);
+    }
     if (ka_stream_) {
       // The KeepAlive stream was already created, we need to close it before shutting down ...
-      ops_.async_op_start("session/shutdown/writes_done");
+      async_op_tracer writes_done_trace(ops_, "session/shutdown/writes_done");
       auto writes_done_complete =
           queue_.async_writes_done(*ka_stream_, "session/shutdown/writes_done", gh::use_future());
       // ... block until it closes ...
       writes_done_complete.get();
-      ops_.async_op_done("session/shutdown/writes_done");
 
-      ops_.async_op_start("session/shutdown/finish");
+      async_op_tracer finish_trace(ops_, "session/shutdown/finish");
       auto finish_complete = queue_.async_finish(*ka_stream_, "session/shutdown/finish", gh::use_future());
       auto status = finish_complete.get();
-      ops_.async_op_done("session/shutdown/finish");
       check_grpc_status(status, "session::finish()");
     }
     ops_.block_until_all_done();
@@ -101,11 +99,10 @@ private:
     // this is (unfortunately) an asynchronous operation, so we have to
     // do some magic ...
     std::promise<bool> stream_ready;
-    ops_.async_op_start("session/ka_stream");
+    async_op_tracer create_rdwr_stream_trace(ops_, "session/ka_stream");
     auto fut = queue_.async_create_rdwr_stream(
         lease_client_.get(), &etcdserverpb::Lease::Stub::AsyncLeaseKeepAlive, "session/ka_stream", gh::use_future());
     this->ka_stream_ = fut.get();
-    ops_.async_op_done("session/ka_stream");
 
     if (not state_machine_.change_state("preamble", session_state::connected)) {
       throw std::runtime_error("Failed to change state machine to 'connected");
@@ -122,12 +119,11 @@ private:
     req.set_ttl(ttl_seconds.count());
     req.set_id(lease_id_);
 
-    ops_.async_op_start("session/preamble/lease_grant");
+    async_op_tracer lease_grant_trace(ops_, "session/preamble/lease_grant");
     auto lfut = queue_.async_rpc(
         lease_client_.get(), &etcdserverpb::Lease::Stub::AsyncLeaseGrant, std::move(req),
         "session/preamble/lease_grant", gh::use_future());
     auto resp = lfut.get();
-    ops_.async_op_done("session/preamble/lease_grant");
 
     // TODO() - probably need to retry until it succeeds, with some kind of backoff, and a long timeout ...
     if (resp.error() != "") {
@@ -159,6 +155,10 @@ private:
     if (ops_.in_shutdown()) {
       // ... already shutdown once, nothing to do ...
       return;
+    }
+    if (current_timer_) {
+      current_timer_->cancel();
+      current_timer_.reset();
     }
     if (ka_stream_) {
       queue_.try_cancel_on(*ka_stream_);
