@@ -117,11 +117,16 @@ class async_op_tracer {
 public:
   async_op_tracer(async_op_counter& counter, char const* name)
       : counter_(counter)
-      , name_(name) {
-    counter_.async_op_start(name_);
+      , name_(name)
+      , status_(false) {
+    status_ = counter_.async_op_start(name_);
   }
   ~async_op_tracer() {
     counter_.async_op_done(name_);
+  }
+
+  operator bool() const {
+    return status_;
   }
 
   async_op_tracer(async_op_tracer&&) = delete;
@@ -132,6 +137,7 @@ public:
 private:
   async_op_counter& counter_;
   char const* name_;
+  bool status_;
 };
 
 } // namespace detail

@@ -134,7 +134,8 @@ private:
   }
 
   void create_watcher_stream() {
-    if (not ops_.async_op_start("election_observer/create_watcher_stream")) {
+    async_op_tracer create_watcher_tracer(ops_, "election_observer/create_watcher_stream");
+    if (not create_watcher_tracer) {
       return;
     }
     // ... we use a blocking operation here because the extra complexity to make these asynchronous is not worth it ...
@@ -142,7 +143,6 @@ private:
         watch_stub_.get(), &etcdserverpb::Watch::Stub::AsyncWatch, "election_observer/create_watcher_stream",
         gh::use_future());
     auto tmp = fut.get();
-    ops_.async_op_done("create_watcher_stream()");
     std::unique_lock<std::mutex> lock(mu_);
     watcher_stream_ = tmp;
   }

@@ -143,20 +143,16 @@ public:
           [this, w](auto op, bool ok) { this->on_watch_cancel(op, ok, w); });
     }
     // The watcher stream was already created, we need to close it before shutting down the completion queue ...
-    (void)ops_.async_op_start("election_candidate/writes_done");
+    async_op_tracer writes_done_trace(ops_, "election_candidate/writes_done");
     auto writes_done_complete =
         queue_.async_writes_done(*watcher_stream_, "election_candidate/writes_done", gh::use_future());
-
-    // ... block until it closes ...
     writes_done_complete.get();
-    (void)ops_.async_op_done("election_candidate/writes_done");
     GH_LOG(trace) << log_header("") << "  writes done completed";
 
-    (void)ops_.async_op_start("election_candidate/finish");
+    async_op_tracer finish_tracer(ops_, "election_candidate/finish");
     auto finished_complete = queue_.async_finish(*watcher_stream_, "election_candidate/finish", gh::use_future());
     queue_.try_cancel_on(*watcher_stream_);
     finished_complete.get();
-    (void)ops_.async_op_done("election_candidate/finish");
     // ... if there is a pending callback we need to let them know this candidate is not going to be elected ...
     election_result(false);
   }
@@ -184,6 +180,7 @@ private:
    * Create a watcher stream.
    */
   void create_watch_stream() {
+    async_op_tracer create_watcher_trace(ops_, "election_candidate/watch");
     auto fut = queue_.async_create_rdwr_stream(
         watch_stub_.get(), &etcdserverpb::Watch::Stub::AsyncWatch, "election_candidate/watch", gh::use_future());
     watcher_stream_ = fut.get();
@@ -326,6 +323,7 @@ private:
 
   /// Refactor code to perform a Txn() request.
   etcdserverpb::TxnResponse commit(etcdserverpb::TxnRequest const& r, std::string name) {
+    async_op_tracer commit_trace(ops_, name.c_str());
     etcdserverpb::TxnRequest req = r;
     auto fut = queue_.async_rpc(
         kv_stub_.get(), &etcdserverpb::KV::Stub::AsyncTxn, std::move(req), std::move(name), gh::use_future());
