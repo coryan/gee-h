@@ -46,8 +46,9 @@ public:
       , current_watches_()
       , watched_keys_()
       , elected_(false)
-        , promise_()
-      , ops_() {
+      , promise_()
+      , ops_()
+      , reads_() {
     election_prefix_ = election_name_ + "/";
     std::ostringstream os;
     os << election_prefix_ << std::hex << lease_id_;
@@ -129,9 +130,10 @@ public:
       }
     }
     // ... cancel all the watchers too ...
+    async_op_counter cancels;
     for (auto w : watches) {
       GH_LOG(trace) << log_header(" cancel watch") << " = " << w;
-      if (not ops_.async_op_start("election_candidate/cancel_watcher")) {
+      if (not cancels.async_op_start("election_candidate/cancel_watcher")) {
         return;
       }
       etcdserverpb::WatchRequest req;
@@ -140,8 +142,11 @@ public:
 
       queue_.async_write(
           *watcher_stream_, std::move(req), "election_candidate/cancel_watcher",
-          [this, w](auto op, bool ok) { this->on_watch_cancel(op, ok, w); });
+          [this, w, &cancels](auto op, bool ok) { this->on_watch_cancel(op, ok, w, cancels); });
     }
+    cancels.block_until_all_done();
+    queue_.try_cancel_on(*watcher_stream_);
+    reads_.block_until_all_done();
     // The watcher stream was already created, we need to close it before shutting down the completion queue ...
     async_op_tracer writes_done_trace(ops_, "election_candidate/writes_done");
     auto writes_done_complete =
@@ -151,7 +156,6 @@ public:
 
     async_op_tracer finish_tracer(ops_, "election_candidate/finish");
     auto finished_complete = queue_.async_finish(*watcher_stream_, "election_candidate/finish", gh::use_future());
-    queue_.try_cancel_on(*watcher_stream_);
     finished_complete.get();
     // ... if there is a pending callback we need to let them know this candidate is not going to be elected ...
     election_result(false);
@@ -368,7 +372,7 @@ private:
       GH_LOG(trace) << log_header("on_watch_create(.., false) wkey=") << wkey;
       return;
     }
-    if (not ops_.async_op_start("election_candidate/on_watch_create/watch")) {
+    if (not reads_.async_op_start("election_candidate/on_watch_create/watch")) {
       return;
     }
 
@@ -378,14 +382,14 @@ private:
   }
 
   /// Called when a Write() operation that cancels a watcher completes.
-  void on_watch_cancel(watch_write_op const& op, bool ok, std::uint64_t watched_id) {
+  void on_watch_cancel(watch_write_op const& op, bool ok, std::uint64_t watched_id, async_op_counter& cancels) {
     // ... there should be a Read() pending already ...
-    ops_.async_op_done("election_candidate/cancel_watcher");
+    cancels.async_op_done("election_candidate/cancel_watcher");
   }
 
   /// Called when a Read() operation in the watcher stream completes.
   void on_watch_read(watch_read_op const& op, bool ok, std::string const& wkey, std::uint64_t wrevision) {
-    ops_.async_op_done("election_candidate/*/read");
+    reads_.async_op_done("election_candidate/*/read");
     if (not ok) {
       GH_LOG(trace) << log_header("on_watch_read(.., false) wkey=") << wkey;
       return;
@@ -425,7 +429,7 @@ private:
       return;
     }
     // ... the watcher was not canceled, so try reading again ...
-    if (not ops_.async_op_start("election_candidate/on_watch_read/read")) {
+    if (not reads_.async_op_start("election_candidate/on_watch_read/read")) {
       return;
     }
 
@@ -453,7 +457,7 @@ private:
     elected_.store(result);
     try {
       promise_.set_value(result);
-    } catch(std::future_error const& ex) {
+    } catch (std::future_error const& ex) {
       // ... ignore already satisfied errors ...
       if (ex.code() != std::future_errc::promise_already_satisfied) {
         throw;
@@ -488,6 +492,7 @@ private:
   std::promise<bool> promise_;
 
   async_op_counter ops_;
+  async_op_counter reads_;
 };
 
 } // namespace detail
