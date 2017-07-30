@@ -303,6 +303,7 @@ private:
       queue_.try_cancel_on(*watcher_stream_);
     }
     ops_.block_until_all_done();
+    reads_.block_until_all_done();
   }
 
   /// Refactor code common to proclaim() and create_node()
