@@ -73,6 +73,7 @@ public:
       state_machine_.change_state("revoke()", session_state::revoked);
     }
     if (ka_stream_) {
+      reads_.block_until_all_done();
       // The KeepAlive stream was already created, we need to close it before shutting down ...
       async_op_tracer writes_done_trace(ops_, "session/shutdown/writes_done");
       auto writes_done_complete =
@@ -164,6 +165,7 @@ private:
       queue_.try_cancel_on(*ka_stream_);
     }
     ops_.block_until_all_done();
+    reads_.block_until_all_done();
     state_machine_.change_state("shutdown()", session_state::shutdown);
   }
 
@@ -212,13 +214,13 @@ private:
     if (not state_machine_.change_state("on_write()", session_state::waiting_for_keep_alive_read)) {
       return;
     }
-    ops_.async_op_start("session/on_write/read");
+    reads_.async_op_start("session/on_write/read");
     queue_.async_read(*ka_stream_, "session/on_write/read", [this](auto fop, bool fok) { this->on_read(fop, fok); });
   }
 
   /// Handle the Read() completion, schedule a new Timer().
   void on_read(ka_stream_type::read_op& op, bool ok) {
-    ops_.async_op_done("session/on_write/read");
+    reads_.async_op_done("session/on_write/read");
     if (not ok) {
       // TODO() - consider logging or exceptions in this case (canceled operation) ...
       return;
@@ -231,6 +233,7 @@ private:
 
 private:
   completion_queue_type& queue_;
+  async_op_counter reads_;
 };
 
 } // namespace detail
