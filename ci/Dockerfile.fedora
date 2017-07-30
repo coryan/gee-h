@@ -69,7 +69,7 @@ ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 
 # ... capture the Travis job number, effectively this busts the cache
 # in each build, which we want anyway ...
-ARG TRAVIS_JOB_NUMBER=
+ARG TRAVIS_JOB_NUMBER=""
 RUN echo Running build=${TRAVIS_JOB_NUMBER}
 
 # ... copy the contents of the source code directory to the container ...
@@ -80,4 +80,4 @@ COPY . /var/tmp/build-gee-h/
 WORKDIR /var/tmp/build-gee-h/build
 # ... run the configure / compile / test cycle ...
 RUN cmake ${CMAKE_FLAGS} .. && make -j 2
-RUN make -j 2 test || cat Testing/Temporary/LastTest.log
+RUN make -j 2 test || ( cat Testing/Temporary/LastTest.log; exit 1 )
