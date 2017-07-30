@@ -128,6 +128,9 @@ TEST(leader_election, abort) {
 
   gh::leader_election participant_a(queue, etcd_channel, election_name, "session_a", 3000ms);
   EXPECT_EQ(participant_a.value(), "session_a");
+  auto future_a = participant_a.campaign();
+  ASSERT_EQ(std::future_status::ready, future_a.wait_for(1s));
+  EXPECT_EQ(future_a.get(), true);
 
   gh::leader_election participant_b(queue, etcd_channel, election_name, "session_b", 3s);
   EXPECT_EQ(participant_b.value(), "session_b");
