@@ -8,7 +8,6 @@ namespace {
 using election_session_type = gh::detail::session_impl<gh::completion_queue<>>;
 }
 
-#if 0
 /**
  * @test Verify that one can create, and delete a election participant.
  */
@@ -46,7 +45,6 @@ TEST(leader_election, basic) {
     EXPECT_TRUE(false) << "exception raised in election_session.revoke(): " << ex.what();
   }
 }
-#endif // 0
 
 /**
  * @test Verify that an election participant can become the leader.
@@ -117,7 +115,7 @@ TEST(leader_election, switch_leader) {
  * @test Verify that an election participant handles aborted elections.
  */
 TEST(leader_election, abort) {
-  std::string const etcd_address = "localhost:2379";
+  std::string const etcd_address = "localhost:22379";
   auto etcd_channel = grpc::CreateChannel(etcd_address, grpc::InsecureChannelCredentials());
   auto queue = std::make_shared<gh::active_completion_queue>();
   EXPECT_TRUE(true) << "queue created and thread requested";

@@ -57,10 +57,10 @@ class Test(unittest.TestCase):
             print ex.output
             self.assertEqual(ex.returncode, 0)
 
-    def disabled_test_leader_election(self):
+    def test_leader_election(self):
         try:
             text = subprocess.check_output(
-                ["gh/leader_election_test"],
+                ["./gh_leader_election_test"],
                 stderr=subprocess.STDOUT)
             print text
         except subprocess.CalledProcessError as ex:
