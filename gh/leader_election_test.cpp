@@ -39,11 +39,7 @@ TEST(leader_election, basic) {
     EXPECT_GT(tested.lease_id(), 0U);
   }
   EXPECT_TRUE(true) << "destructed participant, revoking auxiliary session leases";
-  try {
-    election_session.revoke();
-  } catch(std::exception const& ex) {
-    EXPECT_TRUE(false) << "exception raised in election_session.revoke(): " << ex.what();
-  }
+  election_session.revoke();
 }
 
 /**
