@@ -5,7 +5,6 @@
 #include <gh/detail/async_op_counter.hpp>
 #include <gh/detail/deadline_timer.hpp>
 #include <gh/detail/grpc_errors.hpp>
-#include <gh/detail/session_state_machine.hpp>
 #include <gh/detail/stream_async_ops.hpp>
 #include <gh/log.hpp>
 #include <gh/session.hpp>
@@ -41,7 +40,6 @@ public:
   session_impl(
       completion_queue_type& queue, std::unique_ptr<etcdserverpb::Lease::Stub> lease_stub, duration_type desired_TTL)
       : queue_(queue)
-      , state_machine_()
       , lease_client_(std::move(lease_stub))
       , ka_stream_()
       , lease_id_(0)
@@ -65,7 +63,6 @@ public:
       completion_queue_type& queue, std::unique_ptr<etcdserverpb::Lease::Stub> lease_stub, duration_type desired_TTL,
       std::uint64_t lease_id)
       : queue_(queue)
-      , state_machine_()
       , lease_client_(std::move(lease_stub))
       , ka_stream_()
       , lease_id_(lease_id)
@@ -95,10 +92,7 @@ public:
   }
 
   bool is_active() const override {
-    auto c = state_machine_.current();
-    using s = session_state;
-    return c == s::connected or c == s::waiting_for_timer or c == s::waiting_for_keep_alive_write or
-           c == s::waiting_for_keep_alive_read;
+    return ((bool)current_timer_) and not ops_.in_shutdown();
   }
 
   /// Convert a duration to the preferred units in this class
@@ -109,7 +103,7 @@ public:
 
   /// Revoke the lease
   void revoke() override {
-    if (not state_machine_.change_state("revoke()", session_state::revoking)) {
+    if (ops_.in_shutdown()) {
       return;
     }
     // ... cancel the outstanding timer, if any ...
@@ -127,7 +121,6 @@ public:
           lease_client_.get(), &etcdserverpb::Lease::Stub::AsyncLeaseRevoke, std::move(req),
           "session/revoke/lease_revoke", gh::use_future());
       auto resp = lfut.get();
-      state_machine_.change_state("revoke()", session_state::revoked);
     }
     if (ka_stream_) {
       reads_.block_until_all_done();
@@ -149,10 +142,6 @@ public:
 private:
   /// Requests (or renews) the lease and setup the watcher stream.
   void preamble() try {
-    if (not state_machine_.change_state("preamble", session_state::connecting)) {
-      throw std::runtime_error("Failed to change state machine to 'connecting");
-    }
-
     // ... we want to block until the keep alive streaming RPC is setup,
     // this is (unfortunately) an asynchronous operation, so we have to
     // do some magic ...
@@ -162,14 +151,6 @@ private:
         lease_client_.get(), &etcdserverpb::Lease::Stub::AsyncLeaseKeepAlive, "session/ka_stream", gh::use_future());
     this->ka_stream_ = fut.get();
 
-    if (not state_machine_.change_state("preamble", session_state::connected)) {
-      throw std::runtime_error("Failed to change state machine to 'connected");
-    }
-
-    // ... the double state transition seems wasteful ...
-    if (not state_machine_.change_state("preamble()", session_state::obtaining_lease)) {
-      throw std::runtime_error("Failed to change state machine to obtaining_lease");
-    }
     // ...request a new lease from the etcd server ...
     etcdserverpb::LeaseGrantRequest req;
     // ... the TTL is is seconds, convert to the right units ...
@@ -190,9 +171,6 @@ private:
       throw std::runtime_error(os.str());
     }
 
-    if (not state_machine_.change_state("preamble()", session_state::lease_obtained)) {
-      throw std::runtime_error("Failed to change state machine to lease_obtained");
-    }
     lease_id_ = resp.id();
     actual_TTL_ = convert_duration(std::chrono::seconds(resp.ttl()));
 
@@ -207,9 +185,6 @@ private:
 
   /// Shutdown the local resources.
   void shutdown() {
-    if (not state_machine_.change_state("shutdown()", session_state::shutting_down)) {
-      return;
-    }
     if (ops_.in_shutdown()) {
       // ... already shutdown once, nothing to do ...
       return;
@@ -221,23 +196,21 @@ private:
     if (ka_stream_) {
       queue_.try_cancel_on(*ka_stream_);
     }
-    ops_.block_until_all_done();
     reads_.block_until_all_done();
-    state_machine_.change_state("shutdown()", session_state::shutdown);
+    ops_.block_until_all_done();
   }
 
   /// Set a timer to start the next Write/Read cycle.
   void set_timer() {
-    if (not state_machine_.change_state("set_timer()", session_state::waiting_for_timer)) {
-      return;
-    }
     // ... we are going to schedule a new timer, in general, we should only schedule a timer when there are no pending
     // KeepAlive request/responses in the stream.  The AsyncReaderWriter docs says you can only have one outstanding
     // Write() request at a time.  If we started the timer there is no guarantee that the timer won't expire before
     // the next response ...
 
     auto deadline = std::chrono::system_clock::now() + (actual_TTL_ / keep_alives_per_ttl);
-    ops_.async_op_start("session/set_timer/ttl_refresh");
+    if (not ops_.async_op_start("session/set_timer/ttl_refresh")) {
+      return;
+    }
     current_timer_ = queue_.make_deadline_timer(
         deadline, "session/set_timer/ttl_refresh", [this](auto const& op, bool ok) { this->on_timeout(op, ok); });
   }
@@ -245,17 +218,12 @@ private:
   /// Handle the timer expiration, Write() a new LeaseKeepAlive request.
   void on_timeout(detail::deadline_timer const& op, bool ok) {
     ops_.async_op_done("session/set_timer/ttl_refresh");
-    if (not ok) {
+    if (not ok or not ops_.async_op_start("session/on_timeout/write")) {
       // ... this is a canceled timer ...
-      return;
-    }
-    if (not state_machine_.change_state("on_timeout()", session_state::waiting_for_keep_alive_write)) {
       return;
     }
     etcdserverpb::LeaseKeepAliveRequest req;
     req.set_id(lease_id());
-
-    ops_.async_op_start("session/on_timeout/write");
     queue_.async_write(*ka_stream_, std::move(req), "session/on_timeout/write", [this](auto fop, bool fok) {
       this->on_write(fop, fok);
     });
@@ -264,14 +232,10 @@ private:
   /// Handle the Write() completion, schedule a new LeaseKeepAlive Read().
   void on_write(ka_stream_type::write_op& op, bool ok) {
     ops_.async_op_done("session/on_timeout/write");
-    if (not ok) {
+    if (not ok or not reads_.async_op_start("session/on_write/read")) {
       // TODO() - consider logging or exceptions in this case (canceled operation) ...
       return;
     }
-    if (not state_machine_.change_state("on_write()", session_state::waiting_for_keep_alive_read)) {
-      return;
-    }
-    reads_.async_op_start("session/on_write/read");
     queue_.async_read(*ka_stream_, "session/on_write/read", [this](auto fop, bool fok) { this->on_read(fop, fok); });
   }
 
@@ -291,7 +255,6 @@ private:
 private:
   completion_queue_type& queue_;
 
-  detail::session_state_machine state_machine_;
   std::unique_ptr<etcdserverpb::Lease::Stub> lease_client_;
   std::shared_ptr<ka_stream_type> ka_stream_;
 

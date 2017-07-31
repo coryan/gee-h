@@ -111,7 +111,6 @@ TEST(session_impl, lease_error) {
   EXPECT_THROW(
       s = std::make_unique<session_type>(queue, std::unique_ptr<etcdserverpb::Lease::Stub>(), 5000ms), std::exception);
   EXPECT_FALSE((bool)s);
-
 }
 
 /**

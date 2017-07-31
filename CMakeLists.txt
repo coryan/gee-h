@@ -129,8 +129,6 @@ add_library(gee_h SHARED
         gh/detail/mocked_grpc_interceptor.hpp
         gh/detail/null_stream.hpp
         gh/detail/stream_async_ops.hpp
-        gh/detail/session_state_machine.cpp
-        gh/detail/session_state_machine.hpp
         gh/detail/session_impl.hpp
         gh/detail/stream_future_status.hpp
         gh/election_candidate.hpp
@@ -173,7 +171,6 @@ set(all_unit_tests
         gh_detail_mocked_grpc_interceptor_ut
         gh_detail_null_stream_ut
         gh_detail_session_impl_ut
-        gh_detail_session_state_machine_ut
         gh_log_ut
         gh_log_severity_ut
         gh_log_sink_ut
