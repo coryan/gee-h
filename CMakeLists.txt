@@ -171,6 +171,7 @@ set(all_unit_tests
         gh_detail_mocked_grpc_interceptor_ut
         gh_detail_null_stream_ut
         gh_detail_session_impl_ut
+        gh_detail_stream_future_status_ut
         gh_log_ut
         gh_log_severity_ut
         gh_log_sink_ut
