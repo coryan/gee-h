@@ -81,3 +81,8 @@ WORKDIR /var/tmp/build-gee-h/build
 # ... run the configure / compile / test cycle ...
 RUN cmake ${CMAKE_FLAGS} .. && make -j 2
 RUN make -j 2 test || ( cat Testing/Temporary/LastTest.log; exit 1 )
+
+# ... verify that the install target works as expected ...
+RUN make install
+WORKDIR /var/tmp/build-gee-h/tests/install/build
+RUN cmake ${CMAKE_FLAGS} .. && make -j 2

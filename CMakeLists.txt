@@ -24,8 +24,10 @@ set(PACKAGE_BUGREPORT "https://github.com/coryan/gee-h/issues")
 project(Gee-H CXX C)
 
 # Require C++14 for this project ...
-set(CXX_STANDARD_REQUIRED 14)
-set(CMAKE_CXX_STANDARD ${CXX_STANDARD_REQUIRED}) # for older cmake
+set(CMAKE_CXX_STANDARD 14)
+set(CXX_STANDARD_REQUIRED ON)
+
+option(GEE_H_DISABLE_TESTS, "Disable unit and integration tests. Can be useful to avoid installing gmock+gtest." OFF)
 
 # ... the author is paranoid.  Turn on all available warnings
 # and turn warnings into errors to stop the build if any warning is
@@ -47,12 +49,6 @@ CHECK_CXX_COMPILER_FLAG(/W4 COMPILER_SUPPORTS_SWALL)
 if(COMPILER_SUPPORTS_SWALL)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Wall")
 endif()
-
-# ... turn on testing support in CMake ...
-enable_testing()
-
-# ... external dependencies and packages ...
-add_subdirectory(ext/googletest/googlemock)
 
 # ... include the functions to compile proto files ...
 include(FindProtobuf)
@@ -158,6 +154,42 @@ target_link_libraries(watcher_and_compaction gee_h ${GRPCPP_LIBRARIES} ${GRPC_LI
 add_executable(join_election examples/join_election.cpp)
 target_link_libraries(join_election gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
 
+# ... determine if libraries are installed in the lib64 directory ...
+get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
+if ("${LIB64}" STREQUAL "TRUE")
+    set(LIBSUFFIX 64)
+else()
+    set(LIBSUFFIX "")
+endif()
+set(INSTALL_LIB_DIR lib${LIBSUFFIX} CACHE PATH "Installation directory for libraries")
+
+# ... generate a pkg-config for Gee-H ...
+SET(PKG_CONFIG_REQUIRES "grpc++ grpc protobuf")
+SET(PKG_CONFIG_LIBDIR "\${prefix}/lib")
+SET(PKG_CONFIG_INCLUDEDIR "\${prefix}/include")
+SET(PKG_CONFIG_LIBS "-L\${libdir} -lgee_h")
+SET(PKG_CONFIG_CFLAGS "-I\${includedir}")
+CONFIGURE_FILE(
+        "${CMAKE_CURRENT_SOURCE_DIR}/templates/pkg-config.pc.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc")
+
+# ... define the install rules ...
+install(TARGETS observe_election join_election gee_h
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION ${INSTALL_LIB_DIR})
+install(DIRECTORY gh/ DESTINATION include/gh FILES_MATCHING PATTERN "*.hpp")
+install(DIRECTORY ${CMAKE_BINARY_DIR}/etcd/ DESTINATION include/etcd FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY ${CMAKE_BINARY_DIR}/gogoproto/ DESTINATION include/gogoproto FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY ${CMAKE_BINARY_DIR}/google/ DESTINATION include/google FILES_MATCHING PATTERN "*.h")
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc" DESTINATION lib/pkgconfig)
+
+if(NOT GEE_H_DISABLE_TESTS)
+# ... turn on testing support in CMake ...
+enable_testing()
+
+# ... external dependencies and packages ...
+add_subdirectory(ext/googletest/googlemock)
+
 # ... all the unit tests, we setup the targets and dependencies in a loop ...
 set(all_unit_tests
         gh_active_completion_queue_ut
@@ -207,3 +239,4 @@ target_link_libraries(gh_leader_election_test gee_h gmock gtest gtest_main)
 add_test(NAME gh_integration_tests
         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/gh/integration_tests.py
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+endif(NOT GEE_H_DISABLE_TESTS)
