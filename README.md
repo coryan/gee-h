@@ -1,6 +1,6 @@
 # Gee-H
 
-A C++14 client library for `etcd` leader election.
+A C++14 client library for leader election using `etcd`.
 
 ## Status
 [![Build Status](https://travis-ci.org/coryan/gee-h.svg?branch=master)](https://travis-ci.org/coryan/gee-h)
@@ -18,6 +18,69 @@ cmake .
 make
 make test
 make install
+```
+
+## Motivation
+
+[Leader election](https://en.wikipedia.org/wiki/Leader_election)
+is a building block for large distributed systems.
+The context is some component of the distributed system that needs to be
+replicated for increased availability, but that cannot have more
+than one instance active at a time because the component acts as a coordinator to
+distribute some non-trivially parallelizable workload.
+
+The common solution is to perform a leader election between the instances
+of the component in question.
+The instance that "wins" the election plays the leader role and remains active.
+The other instances passively wait until the leader terminates, gracefully or not.
+
+Gee-H solves this coordination problem using the
+[`etcd` lock service](https://en.wikipedia.org/wiki/Container_Linux_by_CoreOS#Cluster_infrastructure).
+
+## Watching an Election
+
+The `examples/observe_election.cpp` example shows how to watch an election.
+After some initialization boilerplate the main class is created using:
+
+```cpp
+  gh::active_completion_queue queue;
+  std::shared_ptr<gh::election_observer> election_observer(new observer_type(
+      election_name, queue.cq(), etcdserverpb::KV::NewStub(etcd_channel), etcdserverpb::Watch::NewStub(etcd_channel)));
+```
+
+the class monitors the given election (`election_name` in this case).
+The application creates a callback to receive updates about the election:
+
+```cpp
+auto subscriber = [](std::string const& key, std::string const& value) {
+  if (key.empty()) {
+    std::cout << "no current leader" << std::endl;
+    return;
+  }
+  std::cout << "current leader is " << key << ", with value=" << value << std::endl;
+};
+auto token = election_observer->subscribe(std::move(subscriber));
+```
+
+## Joining an Election
+
+The `examples/join_election.cpp` example shows how to join an election.
+After some initialization boilerplate the main class is created using:
+
+```cpp
+gh::active_completion_queue queue;
+std::shared_ptr<gh::session> session(new session_type(queue.cq(), etcdserverpb::Lease::NewStub(etcd_channel), 5s));
+
+std::shared_ptr<gh::election_candidate> election_candidate(new candidate_type(
+    queue.cq(), session->lease_id(), etcdserverpb::KV::NewStub(etcd_channel),
+    etcdserverpb::Watch::NewStub(etcd_channel), election_name, value));
+```
+
+The application can then block until the current candidate wins the election:
+
+```cpp
+auto fut = election_candidate->campaign();
+bool elected = fut.get();
 ```
 
 ## What is that name?
