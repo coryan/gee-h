@@ -395,9 +395,9 @@ private:
       GH_LOG(trace) << log_header("on_watch_read(.., false) wkey=") << wkey;
       return;
     }
+    std::unique_lock<std::mutex> lock(mu_);
     if (op.response.created()) {
       GH_LOG(trace) << "  received new watcher=" << op.response.watch_id();
-      std::lock_guard<std::mutex> lock(mu_);
       current_watches_.insert(op.response.watch_id());
     } else {
       GH_LOG(trace) << log_header("") << "  update for existing watcher=" << op.response.watch_id();
@@ -412,28 +412,27 @@ private:
       // ... remove that key from the set of keys we are waiting to be deleted ...
       watched_keys_.erase(ev.prev_kv().key());
     }
-    check_election_over_maybe();
-    // ... unless the watcher was canceled we should continue to read from it ...
-    if (op.response.canceled()) {
-      current_watches_.erase(op.response.watch_id());
-      return;
-    }
-    if (op.response.compact_revision()) {
+
+    // ... if the watcher was canceled we need to check if there is a predecessor to watch ...
+    if (op.response.canceled() or op.response.compact_revision()) {
       GH_LOG(info) << log_header("") << " watcher cancelled with compact_revision=" << op.response.compact_revision()
-                   << ", wkey=" << wkey << ", revision=" << wrevision << ", reason=" << op.response.cancel_reason()
-                   << ", watch_id=" << op.response.watch_id();
-      {
-        std::lock_guard<std::mutex> lock(mu_);
-        current_watches_.erase(op.response.watch_id());
-      }
-      query_predecessor();
-      return;
+                   << ", canceled=" << op.response.canceled() << ", cancel_reason=" << op.response.cancel_reason()
+                   << ", wkey=" << wkey << ", revision=" << wrevision << ", watch_id=" << op.response.watch_id();
+      current_watches_.erase(op.response.watch_id());
+      lock.unlock();
+      return query_predecessor();
     }
-    // ... the watcher was not canceled, so try reading again ...
+
+    // ... also, if there are no known predecessors, we need to check if there is still another one ...
+    if (watched_keys_.empty()) {
+      lock.unlock();
+      return query_predecessor();
+    }
+
+    // ... the watcher is still active, so try reading again ...
     if (not reads_.async_op_start("election_candidate/on_watch_read/read")) {
       return;
     }
-
     queue_.async_read(
         *watcher_stream_, "election_candidate/on_watch_read/read",
         [this, wkey, wrevision](auto op, bool ok) { this->on_watch_read(op, ok, wkey, wrevision); });
