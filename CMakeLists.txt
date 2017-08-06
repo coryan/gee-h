@@ -149,8 +149,6 @@ target_link_libraries(gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIB
 
 add_executable(observe_election examples/observe_election.cpp)
 target_link_libraries(observe_election gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
-add_executable(watcher_and_compaction examples/watcher_and_compaction.cpp)
-target_link_libraries(watcher_and_compaction gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
 add_executable(join_election examples/join_election.cpp)
 target_link_libraries(join_election gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
 
@@ -240,3 +238,8 @@ add_test(NAME gh_integration_tests
         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/gh/integration_tests.py
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 endif(NOT GEE_H_DISABLE_TESTS)
+
+add_executable(watcher_and_compaction experiments/watcher_and_compaction.cpp)
+target_link_libraries(watcher_and_compaction gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
+add_executable(cluster_failure_behavior experiments/cluster_failure_behavior.cpp)
+target_link_libraries(cluster_failure_behavior gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
