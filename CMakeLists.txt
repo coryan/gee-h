@@ -16,7 +16,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 set(PACKAGE_NAME "Gee-H")
-set(PACKAGE_VERSION   "0.1")
+set(PACKAGE_VERSION   "0.2")
 set(PACKAGE_STRING    "${PACKAGE_NAME} ${PACKAGE_VERSION}")
 set(PACKAGE_TARNAME   "${PACKAGE_NAME}-${PACKAGE_VERSION}")
 set(PACKAGE_BUGREPORT "https://github.com/coryan/gee-h/issues")
