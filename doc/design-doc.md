@@ -48,6 +48,23 @@ While the protocol is much simpler to implement than the classical computer scie
 the implementation still needs to take into account the behavior of `etcd` in practice.
 Specifically:
 
+#### How to handle disconnections from the etcd server
+
+Consider a election candidate that has not yet gain leadership.
+It is possible that the application will lose connectivity to the `etcd` server: should the application reconnect
+automatically?
+Should the application simply abort the election and crash?
+
+Likewise, what should the application do if it has been elected leader and then it loses connection to the etcd server.
+Should the application crash?  Should the library notify the application?
+If we elect not to crash, how does the library indicate that it is safe to wait to be elected again?
+
+#### Failover
+
+The gRPC library does not seem to support failover from one member of the `etcd` cluster to another.
+There is no mechanism to provide multiple addresses to `CreateChannel` or to compose multiple channels.
+This means we need to create our own library to handle failover if the etcd server the library connects to fails.
+
 #### Compactions
 
 The `etcd` server administrators can [compact](https://coreos.com/etcd/docs/latest/op-guide/maintenance.html)
