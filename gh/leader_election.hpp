@@ -10,7 +10,7 @@ namespace gh {
 /**
  * Participate in a leader election protocol.
  */
-class leader_election {
+class leader_election : public election_candidate {
 public:
   /// Constructor, blocks until this participant becomes the leader.
   template <typename duration_type>
@@ -34,48 +34,36 @@ public:
    * The application should call resign() to release the resources
    * held in the etcd server *before* the destructor is called.
    */
-  ~leader_election() noexcept(false);
+  ~leader_election() noexcept(false) = default;
 
-  /// Return true if the candidate is currently the leader
-  bool elected() const {
+  //@{
+  /// @name implement election_candidate interface using pimpl idiom.
+  bool elected() const override {
     return candidate_->elected();
   }
-
-  /// Return the etcd key associated with this participant
-  std::string const& key() const {
+  std::string const& key() const override {
     return candidate_->key();
   }
-
-  /// Return the etcd eky associated with this participant
-  std::string const& value() const {
+  std::string const& value() const override {
     return candidate_->value();
   }
-
-  /// Return the fetched participant revision, mostly for debugging
-  std::int64_t creation_revision() const {
+  std::int64_t creation_revision() const override {
     return candidate_->creation_revision();
   }
-
-  /// Return the lease corresponding to this participant's session.
-  std::uint64_t lease_id() const {
+  std::uint64_t lease_id() const override {
     return candidate_->lease_id();
   }
-
-  /// Change the published value
-  void proclaim(std::string const& value) {
+  void proclaim(std::string const& value) override {
     candidate_->proclaim(value);
   }
-
-  /// Start the campaign
-  virtual std::shared_future<bool> campaign() {
+  std::shared_future<bool> campaign() override {
     return candidate_->campaign();
   }
-
-  /// Resign from the election, terminate the internal loops
-  void resign() {
+  void resign() override {
     candidate_->resign();
     session_->revoke();
   }
+  //@}
 
 private:
   /// Refactor common code to public constructors ...

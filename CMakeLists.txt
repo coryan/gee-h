@@ -142,6 +142,8 @@ add_library(gee_h SHARED
         gh/prefix_end.cpp
         gh/session.hpp
         gh/session.cpp
+        gh/watch_election.hpp
+        gh/watch_election.cpp
         ${PROTO_SOURCES} ${PROTO_HDRS}
         ${GRPCPP_SOURCES} ${GRPCPP_HEADERS}
     )
@@ -233,6 +235,8 @@ add_executable(gh_session_test gh/session_test.cpp)
 target_link_libraries(gh_session_test gee_h gmock gtest gtest_main)
 add_executable(gh_leader_election_test gh/leader_election_test.cpp)
 target_link_libraries(gh_leader_election_test gee_h gmock gtest gtest_main)
+add_executable(gh_watch_election_test gh/watch_election_test.cpp)
+target_link_libraries(gh_watch_election_test gee_h gmock gtest gtest_main)
 
 add_test(NAME gh_integration_tests
         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/gh/integration_tests.py

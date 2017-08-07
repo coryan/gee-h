@@ -14,13 +14,14 @@ public:
   //@{
   /// @name type traits
   /**
-   * Define the type used by suscribers.
+   * Define the type used by subscribers.
    *
    * @param new_key the key of the new leader, an empty string if there is no longer a leader.
    * @param new_value the new value set by the leader.
    */
   using subscriber_type = std::function<void(std::string const& new_key,std::string const& new_value)>;
   //@}
+
   /// Destructor, can raise if deleting local gRPC resources fail.
   virtual ~election_observer() noexcept(false) = 0;
 

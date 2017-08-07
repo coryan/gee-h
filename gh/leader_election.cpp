@@ -15,7 +15,4 @@ leader_election::leader_election(
           queue_->cq(), session_->lease_id(), etcdserverpb::KV::NewStub(channel_),
           etcdserverpb::Watch::NewStub(channel_), election_name, participant_value)) {
 }
-
-leader_election::~leader_election() noexcept(false) {
-}
 } // namespace gh
