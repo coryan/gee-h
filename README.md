@@ -43,13 +43,13 @@ The `examples/observe_election.cpp` example shows how to watch an election.
 After some initialization boilerplate the main class is created using:
 
 ```cpp
-  gh::active_completion_queue queue;
-  std::shared_ptr<gh::election_observer> election_observer(new observer_type(
-      election_name, queue.cq(), etcdserverpb::KV::NewStub(etcd_channel), etcdserverpb::Watch::NewStub(etcd_channel)));
+  auto channel = grpc::CreateChannel(...);
+  auto queue = std::make_shared<gh::active_completion_queue>();
+  gh::watch_election (queue.cq(), channel, election_name);
 ```
 
 the class monitors the given election (`election_name` in this case).
-The application creates a callback to receive updates about the election:
+The application can create callbacks to receive updates about the election:
 
 ```cpp
 auto subscriber = [](std::string const& key, std::string const& value) {
@@ -68,18 +68,15 @@ The `examples/join_election.cpp` example shows how to join an election.
 After some initialization boilerplate the main class is created using:
 
 ```cpp
-gh::active_completion_queue queue;
-std::shared_ptr<gh::session> session(new session_type(queue.cq(), etcdserverpb::Lease::NewStub(etcd_channel), 5s));
-
-std::shared_ptr<gh::election_candidate> election_candidate(new candidate_type(
-    queue.cq(), session->lease_id(), etcdserverpb::KV::NewStub(etcd_channel),
-    etcdserverpb::Watch::NewStub(etcd_channel), election_name, value));
+  auto channel = grpc::CreateChannel(...);
+  auto queue = std::make_shared<gh::active_completion_queue>();
+  gh::leader_election election(queue, channel, "my-election", "my-value", std::chrono::seconds(5));
 ```
 
 The application can then block until the current candidate wins the election:
 
 ```cpp
-auto fut = election_candidate->campaign();
+auto fut = election.campaign();
 bool elected = fut.get();
 ```
 

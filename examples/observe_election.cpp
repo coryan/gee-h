@@ -1,11 +1,10 @@
 #include <gh/active_completion_queue.hpp>
-#include <gh/detail/election_observer_impl.hpp>
+#include <gh/watch_election.hpp>
+#include <gh/log.hpp>
 
 #include <csignal>
 
 namespace {
-using observer_type = gh::detail::election_observer_impl<gh::completion_queue<>>;
-
 bool interrupt = false;
 extern "C" void signal_handler(int sig) {
   interrupt = true;
@@ -25,9 +24,8 @@ int main(int argc, char* argv[]) try {
   gh::log::instance().add_sink(
       gh::make_log_sink([](gh::severity sev, std::string&& x) { std::cerr << x << std::endl; }));
 
-  gh::active_completion_queue queue;
-  std::shared_ptr<gh::election_observer> election_observer(new observer_type(
-      election_name, queue.cq(), etcdserverpb::KV::NewStub(etcd_channel), etcdserverpb::Watch::NewStub(etcd_channel)));
+  auto queue = std::make_shared<gh::active_completion_queue>();
+  gh::watch_election observer(queue, etcd_channel, election_name);
 
   auto subscriber = [](std::string const& key, std::string const& value) {
     if (key.empty()) {
@@ -37,8 +35,8 @@ int main(int argc, char* argv[]) try {
     std::cout << "current leader is " << key << ", with value=" << value << std::endl;
   };
 
-  auto token = election_observer->subscribe(std::move(subscriber));
-  election_observer->startup();
+  auto token = observer.subscribe(std::move(subscriber));
+  observer.startup();
 
   // ... block here until a signal is received ...
   std::signal(SIGINT, &signal_handler);
@@ -48,9 +46,8 @@ int main(int argc, char* argv[]) try {
     std::this_thread::sleep_for(20ms);
   }
 
-  election_observer->unsubscribe(token);
-  election_observer->shutdown();
-
+  observer.unsubscribe(token);
+  observer.shutdown();
 } catch (std::exception const& ex) {
   std::cerr << "std::exception raised: " << ex.what() << std::endl;
   return 1;
