@@ -163,6 +163,48 @@ TEST(mocked_grpc_interceptor, async_rpc_cancelled) {
 }
 
 /**
+ * @test Verify failed RPCs result in exception for the std::promise.
+ */
+TEST(mocked_grpc_interceptor, async_rpc_failed) {
+  using namespace std::chrono_literals;
+
+  // Create a null lease object, we do not need (or want) a real
+  // connection for mocked operations ...
+  std::shared_ptr<etcdserverpb::Lease::Stub> lease;
+
+  using namespace gh;
+  completion_queue<detail::mocked_grpc_interceptor> queue;
+
+  // Prepare the Mock to save the asynchronous operation state,
+  // normally you would simply invoke the callback in the mock action,
+  // but this test wants to verify what happens if there is a delay
+  // ...
+  using ::testing::_;
+  using ::testing::Invoke;
+  EXPECT_CALL(*queue.interceptor().shared_mock, async_rpc(_)).WillRepeatedly(Invoke([](auto bop) mutable {
+    using op_type = gh::detail::async_rpc_op<etcdserverpb::LeaseGrantRequest, etcdserverpb::LeaseGrantResponse>;
+    auto op = dynamic_cast<op_type*>(bop.get());
+    op->status = grpc::Status(grpc::UNKNOWN, "bad stuff", "more details");
+    bop->callback(*bop, true);
+  }));
+
+  // ... make the request, that will post operations to the mock
+  // completion queue ...
+  etcdserverpb::LeaseGrantRequest req;
+  req.set_ttl(5); // in seconds
+  req.set_id(0);  // let the server pick the lease_id
+  auto fut = queue.async_rpc(
+    lease.get(), &etcdserverpb::Lease::Stub::AsyncLeaseGrant, std::move(req), "test/Lease/future/failed",
+    gh::use_future());
+
+  // ... check that the operation was immediately cancelled ...
+  ASSERT_EQ(fut.wait_for(0ms), std::future_status::ready);
+
+  // ... and the promise was satisfied with an exception ...
+  ASSERT_THROW(fut.get(), std::exception);
+}
+
+/**
  * @test Verify creation of rdwr RPC streams is intercepted.
  */
 TEST(mocked_grpc_interceptor, create_rdwr_stream_future) {
