@@ -111,6 +111,7 @@ add_library(gee_h SHARED
         gh/detail/async_op_counter.hpp
         gh/detail/async_op_counter.cpp
         gh/detail/async_rpc_op.hpp
+        gh/detail/backoff_strategy.hpp
         gh/detail/base_async_op.hpp
         gh/detail/base_completion_queue.hpp
         gh/detail/base_completion_queue.cpp
@@ -118,6 +119,8 @@ add_library(gee_h SHARED
         gh/detail/default_grpc_interceptor.hpp
         gh/detail/election_candidate_impl.hpp
         gh/detail/election_observer_impl.hpp
+        gh/detail/exponential_backoff.hpp
+        gh/detail/exponential_backoff.cpp
         gh/detail/grpc_errors.hpp
         gh/detail/grpc_errors.cpp
         gh/detail/grpc_errors.cpp
@@ -199,6 +202,7 @@ set(all_unit_tests
         gh_detail_base_completion_queue_ut
         gh_detail_election_candidate_impl_ut
         gh_detail_election_observer_impl_ut
+        gh_detail_exponential_backoff_ut
         gh_detail_grpc_errors_ut
         gh_detail_mocked_grpc_interceptor_ut
         gh_detail_null_stream_ut
