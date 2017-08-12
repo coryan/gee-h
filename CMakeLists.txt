@@ -115,6 +115,7 @@ add_library(gee_h SHARED
         gh/detail/base_async_op.hpp
         gh/detail/base_completion_queue.hpp
         gh/detail/base_completion_queue.cpp
+        gh/detail/cluster_membership_impl.hpp
         gh/detail/deadline_timer.hpp
         gh/detail/default_grpc_interceptor.hpp
         gh/detail/election_candidate_impl.hpp
@@ -200,6 +201,7 @@ set(all_unit_tests
         gh_completion_queue_ut
         gh_detail_async_op_counter_ut
         gh_detail_base_completion_queue_ut
+        gh_detail_cluster_membership_impl_ut
         gh_detail_election_candidate_impl_ut
         gh_detail_election_observer_impl_ut
         gh_detail_exponential_backoff_ut
