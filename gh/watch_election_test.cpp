@@ -31,6 +31,7 @@ TEST(watch_election, basic) {
   gh::watch_election watcher(queue, etcd_channel, election_name);
   EXPECT_NO_THROW(watcher.startup());
   EXPECT_FALSE(watcher.has_leader());
+  EXPECT_EQ(election_name, watcher.election_name());
 
   gh::leader_election candidate(queue, etcd_channel, election_name, "42", 3000ms);
   EXPECT_TRUE(true) << "participant object constructed";
@@ -71,6 +72,8 @@ TEST(watch_election, basic) {
   sleep_until([&watcher]() { return watcher.current_value() == "bcd234"; });
   EXPECT_EQ(watcher.current_value(), "bcd234");
   EXPECT_EQ(value, "abc123");
+
+  EXPECT_NO_THROW(watcher.shutdown());
 
   EXPECT_TRUE(true) << "revoking auxiliary session leases";
   election_session.revoke();
