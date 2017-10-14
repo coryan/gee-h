@@ -49,9 +49,9 @@ RUN apt-get update && \
 
 # ... compile and install gRPC++ and Protobuf v3 ...
 WORKDIR /var/tmp/build-grpc
-RUN (git clone --depth 10 https://github.com/grpc/grpc.git && \
-    cd grpc && git pull && git submodule update --init && \
-    make -j 2 && make install && \
+RUN (git clone --depth 10 --branch v1.6.x https://github.com/grpc/grpc.git && \
+    cd grpc && git pull && git submodule update --recursive --init && \
+    make -j 2 HAS_SYSTEM_PROTOBUF=false && make install && \
     cd third_party/protobuf && make install)
 
 # ... install etcd and etcdctl in /usr/bin, they are used in the integration tests ...

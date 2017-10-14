@@ -43,9 +43,9 @@ RUN dnf makecache && \
   dnf clean all
 
 WORKDIR /var/tmp/build-grpc
-RUN (git clone --depth 10 https://github.com/grpc/grpc.git && \
-    cd grpc && git pull && git submodule update --init && \
-    make -j 2 LDXX="g++ -std=c++11" LD=gcc CXX="g++ -std=c++11" CC=gcc && \
+RUN (git clone --depth 10 --branch v1.6.x https://github.com/grpc/grpc.git && \
+    cd grpc && git pull && git submodule update --recursive --init && \
+    make -j 2 LDXX="g++ -std=c++11" LD=gcc CXX="g++ -std=c++11" CC=gcc HAS_SYSTEM_PROTOBUF=false && \
     make install && \
     cd third_party/protobuf && make install && \
     echo /usr/local/lib >/etc/ld.so.conf.d/local.conf && ldconfig)
