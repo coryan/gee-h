@@ -10,3 +10,4 @@
 [submodule "ext/etcd"]
 	path = ext/etcd
 	url = https://github.com/coreos/etcd.git
+	branch = release-3.2
