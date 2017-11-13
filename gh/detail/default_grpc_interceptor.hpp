@@ -2,6 +2,7 @@
 #define gh_detail_default_grpc_interceptor_hpp
 
 #include <gh/detail/stream_async_ops.hpp>
+#include <grpc++/alarm.h>
 #include <grpc++/grpc++.h>
 #include <memory>
 
