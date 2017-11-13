@@ -16,9 +16,9 @@
 cmake_minimum_required(VERSION 3.5)
 
 set(PACKAGE_NAME "Gee-H")
-set(PACKAGE_VERSION   "0.2")
-set(PACKAGE_STRING    "${PACKAGE_NAME} ${PACKAGE_VERSION}")
-set(PACKAGE_TARNAME   "${PACKAGE_NAME}-${PACKAGE_VERSION}")
+set(PACKAGE_VERSION "0.2")
+set(PACKAGE_STRING "${PACKAGE_NAME} ${PACKAGE_VERSION}")
+set(PACKAGE_TARNAME "${PACKAGE_NAME}-${PACKAGE_VERSION}")
 set(PACKAGE_BUGREPORT "https://github.com/coryan/gee-h/issues")
 
 project(Gee-H CXX C)
@@ -34,21 +34,21 @@ option(GEE_H_DISABLE_TESTS, "Disable unit and integration tests. Can be useful t
 # emitted ...
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG(-Werror COMPILER_SUPPORTS_WERROR)
-if(COMPILER_SUPPORTS_WERROR)
+if (COMPILER_SUPPORTS_WERROR)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
-endif()
+endif ()
 CHECK_CXX_COMPILER_FLAG(-Wall COMPILER_SUPPORTS_WALL)
-if(COMPILER_SUPPORTS_WALL)
+if (COMPILER_SUPPORTS_WALL)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-endif()
+endif ()
 CHECK_CXX_COMPILER_FLAG(/WX COMPILER_SUPPORTS_WX)
-if(COMPILER_SUPPORTS_WX)
+if (COMPILER_SUPPORTS_WX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /WX")
-endif()
+endif ()
 CHECK_CXX_COMPILER_FLAG(/W4 COMPILER_SUPPORTS_SWALL)
-if(COMPILER_SUPPORTS_SWALL)
+if (COMPILER_SUPPORTS_SWALL)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Wall")
-endif()
+endif ()
 
 # ... include the functions to compile proto files ...
 include(FindProtobuf)
@@ -64,21 +64,11 @@ include_directories(${GRPCPP_INCLUDE_DIRS} ${GRPC_INCLUDE_DIRS} ${PROTOBUF_INCLU
 
 # ... if set, enable code coverage builds for g++, and create a "test_coverage" target to collect the coverage using
 # lcov.  My attempts at using the gcovr cobertura output failed miserably, so I am sticking to what I know ...
-set(COVERAGE false CACHE BOOL "Enable code coverage builds.")
-if(${COVERAGE})
+option(COVERAGE "Enable code coverage builds in Gee-H." OFF)
+if (${COVERAGE})
     include(cmake/CodeCoverage.cmake)
-    include(ProcessorCount)
-    ProcessorCount(NCPUS)
-    set(ctest_parallelism "")
-    if(NOT N EQUAL 0)
-        set(ctest_parallelism "-j ${NCPUS}")
-    endif()
-    APPEND_COVERAGE_COMPILER_FLAGS()
-    SETUP_TARGET_FOR_COVERAGE(
-            NAME test_coverage
-            EXECUTABLE ctest ${ctest_parallelism}
-    )
-endif(${COVERAGE})
+    append_coverage_compiler_flags()
+endif (${COVERAGE})
 
 #
 # Generate C++ sources for the etcd proto files.  It is not a huge collection, but the directory hierarchy is very
@@ -96,7 +86,8 @@ PROTOBUF_GENERATE_CPP(PROTO_SOURCES PROTO_HDRS
         ${PROJECT_SOURCE_DIR}/ext/etcd/mvcc/mvccpb/kv.proto
         ${PROJECT_SOURCE_DIR}/ext/etcd/auth/authpb/auth.proto
         ${PROJECT_SOURCE_DIR}/ext/etcd/etcdserver/etcdserverpb/rpc.proto)
-GRPC_GENERATE_CPP(GRPCPP_SOURCES GRPCPP_HDRS ${PROJECT_SOURCE_DIR}/ext/etcd/etcdserver/etcdserverpb/rpc.proto)
+GRPC_GENERATE_CPP(GRPCPP_SOURCES GRPCPP_HDRS GRPCPP_MOCKS
+        ${PROJECT_SOURCE_DIR}/ext/etcd/etcdserver/etcdserverpb/rpc.proto)
 
 include_directories("${PROJECT_SOURCE_DIR}" "${PROJECT_BINARY_DIR}")
 
@@ -150,7 +141,7 @@ add_library(gee_h SHARED
         gh/watch_election.cpp
         ${PROTO_SOURCES} ${PROTO_HDRS}
         ${GRPCPP_SOURCES} ${GRPCPP_HEADERS}
-    )
+        )
 target_link_libraries(gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
 
 add_executable(observe_election examples/observe_election.cpp)
@@ -162,9 +153,9 @@ target_link_libraries(join_election gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} 
 get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
 if ("${LIB64}" STREQUAL "TRUE")
     set(LIBSUFFIX 64)
-else()
+else ()
     set(LIBSUFFIX "")
-endif()
+endif ()
 set(INSTALL_LIB_DIR lib${LIBSUFFIX} CACHE PATH "Installation directory for libraries")
 
 # ... generate a pkg-config for Gee-H ...
@@ -187,69 +178,82 @@ install(DIRECTORY ${CMAKE_BINARY_DIR}/gogoproto/ DESTINATION include/gogoproto F
 install(DIRECTORY ${CMAKE_BINARY_DIR}/google/ DESTINATION include/google FILES_MATCHING PATTERN "*.h")
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.pc" DESTINATION lib/pkgconfig)
 
-if(NOT GEE_H_DISABLE_TESTS)
-# ... turn on testing support in CMake ...
-enable_testing()
+if (NOT GEE_H_DISABLE_TESTS)
+    # ... turn on testing support in CMake ...
+    enable_testing()
 
-# ... external dependencies and packages ...
-add_subdirectory(ext/googletest/googlemock)
+    # ... external dependencies and packages ...
+    add_subdirectory(ext/googletest/googlemock)
 
-# ... all the unit tests, we setup the targets and dependencies in a loop ...
-set(all_unit_tests
-        gh_active_completion_queue_ut
-        gh_assert_throw_ut
-        gh_completion_queue_ut
-        gh_detail_async_op_counter_ut
-        gh_detail_base_completion_queue_ut
-        gh_detail_cluster_membership_impl_ut
-        gh_detail_election_candidate_impl_ut
-        gh_detail_election_observer_impl_ut
-        gh_detail_exponential_backoff_ut
-        gh_detail_grpc_errors_ut
-        gh_detail_mocked_grpc_interceptor_ut
-        gh_detail_null_stream_ut
-        gh_detail_session_impl_ut
-        gh_detail_stream_future_status_ut
-        gh_log_ut
-        gh_log_severity_ut
-        gh_log_sink_ut
-        gh_prefix_end_ut
-    )
+    # ... all the unit tests, we setup the targets and dependencies in a loop ...
+    set(all_unit_tests
+            gh_active_completion_queue_ut
+            gh_assert_throw_ut
+            gh_completion_queue_ut
+            gh_detail_async_op_counter_ut
+            gh_detail_base_completion_queue_ut
+            gh_detail_cluster_membership_impl_ut
+            gh_detail_election_candidate_impl_ut
+            gh_detail_election_observer_impl_ut
+            gh_detail_etcd_client_ut
+            gh_detail_exponential_backoff_ut
+            gh_detail_grpc_errors_ut
+            gh_detail_mocked_grpc_interceptor_ut
+            gh_detail_null_stream_ut
+            gh_detail_session_impl_ut
+            gh_detail_stream_future_status_ut
+            gh_log_ut
+            gh_log_severity_ut
+            gh_log_sink_ut
+            gh_prefix_end_ut
+            )
 
-# ... add the right libraries to all the unit tests, and also turn them into tests ...
-set(ut_sources)
-foreach(target ${all_unit_tests})
-    string(REGEX MATCH ".*_ut$" is_ut ${target})
-    if(is_ut)
-        string(REGEX REPLACE "^gh_detail_" "gh/detail/" fname ${target})
-        string(REGEX REPLACE "^gh_" "gh/" fname ${fname})
-        add_executable(${target} ${fname}.cpp)
-        get_target_property(tname ${target} NAME)
-        target_link_libraries(${target} gmock gtest gtest_main gee_h grpc++ grpc protobuf)
-        add_test(${tname} ${target})
-        get_target_property(sources ${target} SOURCES)
-        set(ut_sources ${ut_sources} ${sources})
-    endif()
-endforeach()
+    # ... add the right libraries to all the unit tests, and also turn them into tests ...
+    set(ut_sources)
+    foreach (target ${all_unit_tests})
+        string(REGEX MATCH ".*_ut$" is_ut ${target})
+        if (is_ut)
+            string(REGEX REPLACE "^gh_detail_" "gh/detail/" fname ${target})
+            string(REGEX REPLACE "^gh_" "gh/" fname ${fname})
+            add_executable(${target} ${fname}.cpp)
+            get_target_property(tname ${target} NAME)
+            target_link_libraries(${target} gmock gtest gtest_main gee_h grpc++ grpc protobuf)
+            add_test(${tname} ${target})
+            get_target_property(sources ${target} SOURCES)
+            set(ut_sources ${ut_sources} ${sources})
+        endif ()
+    endforeach ()
 
-# ... a giant executable with all the unit tests, this is convenient when using CLion ...
-add_executable(all_unit_tests ${ut_sources})
-target_link_libraries(all_unit_tests gee_h gmock gtest gtest_main)
+    # ... a giant executable with all the unit tests, this is convenient when using CLion ...
+    add_executable(all_unit_tests ${ut_sources})
+    target_link_libraries(all_unit_tests gee_h gmock gtest gtest_main)
 
-# ... integration tests, using the unit test framework to report results ...
-add_executable(gh_session_test gh/session_test.cpp)
-target_link_libraries(gh_session_test gee_h gmock gtest gtest_main)
-add_executable(gh_leader_election_test gh/leader_election_test.cpp)
-target_link_libraries(gh_leader_election_test gee_h gmock gtest gtest_main)
-add_executable(gh_watch_election_test gh/watch_election_test.cpp)
-target_link_libraries(gh_watch_election_test gee_h gmock gtest gtest_main)
+    # ... integration tests, using the unit test framework to report results ...
+    add_executable(gh_session_test gh/session_test.cpp)
+    target_link_libraries(gh_session_test gee_h gmock gtest gtest_main)
+    add_executable(gh_leader_election_test gh/leader_election_test.cpp)
+    target_link_libraries(gh_leader_election_test gee_h gmock gtest gtest_main)
+    add_executable(gh_watch_election_test gh/watch_election_test.cpp)
+    target_link_libraries(gh_watch_election_test gee_h gmock gtest gtest_main)
 
-add_test(NAME gh_integration_tests
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/gh/integration_tests.py
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-endif(NOT GEE_H_DISABLE_TESTS)
+    add_test(NAME gh_integration_tests
+            COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/gh/integration_tests.py
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+endif (NOT GEE_H_DISABLE_TESTS)
 
 add_executable(watcher_and_compaction experiments/watcher_and_compaction.cpp)
 target_link_libraries(watcher_and_compaction gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
 add_executable(cluster_failure_behavior experiments/cluster_failure_behavior.cpp)
 target_link_libraries(cluster_failure_behavior gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
+
+file(GLOB_RECURSE ALL_CXX_SOURCE_FILES gh/*.[hc]pp examples/*.[hc]pp experiments/*.[hc]pp)
+find_program(CLANG_FORMAT clang-format)
+if (CLANG_FORMAT)
+    add_custom_target(clang-format
+            COMMAND ${CLANG_FORMAT} -i ${ALL_CXX_SOURCE_FILES})
+    add_custom_target(check-style
+            COMMAND git diff --exit-code
+            DEPENDS clang-format)
+else ()
+    add_custom_target(check-style)
+endif (CLANG_FORMAT)

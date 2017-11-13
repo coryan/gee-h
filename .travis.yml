@@ -22,7 +22,7 @@ matrix:
     - os: linux
       compiler: gcc
       env: LINUX_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 \
-           CMAKE_FLAGS="-DCOVERAGE:BOOL=true -DCMAKE_BUILD_TYPE=Debug" BUILD_EXTRA=COVERAGE
+           CMAKE_FLAGS="-DCOVERAGE=ON -DCMAKE_BUILD_TYPE=Debug" BUILD_EXTRA=COVERAGE
     - os: linux
       compiler: gcc
       env: LINUX_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04
