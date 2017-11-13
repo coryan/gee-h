@@ -65,7 +65,7 @@ endfunction()
 
 # Generate gRPC  C++ code from .profo files, preserving the directory hierarchy.
 # See https://github.com/coryan/jaybeams/issues/158 for my rant on the subject.
-function(GRPC_GENERATE_CPP SRCS HDRS)
+function(GRPC_GENERATE_CPP SRCS HDRS MOCKS)
     if(NOT ARGN)
         message(SEND_ERROR "Error: GRPC_GENERATE_CPP() called without any proto files")
         return()
@@ -83,6 +83,7 @@ function(GRPC_GENERATE_CPP SRCS HDRS)
 
     set(${SRCS})
     set(${HDRS})
+    set(${MOCKS})
     foreach(FIL ${ARGN})
         get_filename_component(DIR ${FIL} DIRECTORY)
         get_filename_component(FIL_WE ${FIL} NAME_WE)
@@ -97,14 +98,16 @@ function(GRPC_GENERATE_CPP SRCS HDRS)
         endif()
         set(SRC "${CMAKE_CURRENT_BINARY_DIR}/${D}/${FIL_WE}.grpc.pb.cc")
         set(HDR "${CMAKE_CURRENT_BINARY_DIR}/${D}/${FIL_WE}.grpc.pb.h")
+        set(MOCK "${CMAKE_CURRENT_BINARY_DIR}/${D}/${FIL_WE}_mock.grpc.pb.h")
         list(APPEND ${SRCS} "${SRC}")
         list(APPEND ${HDRS} "${HDR}")
+        list(APPEND ${MOCKS} "${MOCK}")
         add_custom_command(
                 OUTPUT "${SRC}" "${HDR}"
                 COMMAND ${PROTOBUF_PROTOC_EXECUTABLE}
                 ARGS
                     --plugin=protoc-gen-grpc=${PROTOC_GRPCPP_PLUGIN_EXECUTABLE}
-                    --grpc_out=${CMAKE_CURRENT_BINARY_DIR}
+                    --grpc_out=generate_mock_code=true:${CMAKE_CURRENT_BINARY_DIR}
                     --cpp_out=${CMAKE_CURRENT_BINARY_DIR}
                     ${_protobuf_include_path}
                 ${FIL}
@@ -116,6 +119,7 @@ function(GRPC_GENERATE_CPP SRCS HDRS)
     set_source_files_properties(${${SRCS}} ${${HDRS}} PROPERTIES GENERATED TRUE)
     set(${SRCS} ${${SRCS}} PARENT_SCOPE)
     set(${HDRS} ${${HDRS}} PARENT_SCOPE)
+    set(${MOCKS} ${${MOCKS}} PARENT_SCOPE)
 endfunction()
 
 find_program(PROTOBUF_PROTOC_EXECUTABLE
