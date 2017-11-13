@@ -41,7 +41,7 @@ AlwaysBreakTemplateDeclarations: true
 BinPackArguments: true
 BinPackParameters: true
 
-# This is controversial, in JayBeams we do:
+# This is controversial, in Gee-H we do:
 #   Foo::Foo()
 #     : Base()
 #     , member_()
