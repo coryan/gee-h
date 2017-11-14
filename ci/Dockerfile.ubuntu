@@ -49,11 +49,7 @@ RUN apt-get update && \
     wget && \
   apt-get clean
 
-# ... capture the arguments that control the build ...
-ARG CXX=clang++
-ARG CC=clang
-ARG CMAKE_FLAGS=""
-ARG BUILD_EXTRA=""
+# ... parallelize the build if possible, useful when testing locally ...
 ARG NCPU=2
 
 # ... compile and install gRPC++ and Protobuf v3 ...
@@ -70,6 +66,12 @@ RUN wget -q https://github.com/coreos/etcd/releases/download/v3.2.1/etcd-v3.2.1-
   cp etcd-v3.2.1-linux-amd64/etcd /usr/bin && \
   cp etcd-v3.2.1-linux-amd64/etcdctl /usr/bin && \
   /bin/rm -fr /var/tmp/install-etcd
+
+# ... capture the arguments that control the build ...
+ARG CXX=clang++
+ARG CC=clang
+ARG CMAKE_FLAGS=""
+ARG BUILD_EXTRA=""
 
 # ... capture the Travis job number, effectively this busts the cache
 # in each build, which we want anyway ...
