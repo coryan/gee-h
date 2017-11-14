@@ -6,8 +6,8 @@ A C++14 client library for leader election using `etcd`.
 [![Build Status](https://travis-ci.org/coryan/gee-h.svg?branch=master)](https://travis-ci.org/coryan/gee-h)
 [![codecov](https://codecov.io/gh/coryan/gee-h/branch/master/graph/badge.svg)](https://codecov.io/gh/coryan/gee-h)
 
-This library is work in progress, I have a working prototype in a separate project
-([JayBeams](https://github.com/coryan/jaybeams/)) which I will be migrating to Gee-H.
+This library is work in progress, it correctly handles a leader election against a single etcd server, I am currently
+working on supporting failovers in the etcd cluster.
 
 ## Install
 
