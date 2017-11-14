@@ -1,6 +1,6 @@
 #define GH_MIN_SEVERITY trace
 #include "gh/detail/cluster_membership_impl.hpp"
-#include <gh/detail/exponential_backoff.hpp>
+#include <gh/detail/rpc_policies.hpp>
 #include <gh/detail/mocked_grpc_interceptor.hpp>
 
 #include <gmock/gmock.h>
@@ -22,7 +22,7 @@ TEST(cluster_membership_impl, normal_lifecycle) {
   using namespace std::chrono_literals;
   completion_queue_type queue;
   std::shared_ptr<grpc::ChannelCredentials> credentials;
-  auto backoff = std::make_shared<gh::detail::exponential_backoff>(10ms, 24h, 1000);
+  auto backoff = std::make_shared<gh::detail::exponential_backoff>(10ms, 24h);
   cluster_membership_type cluster(queue, credentials, backoff, "localhost:22379", 30s);
 
   std::shared_ptr<deadline_timer> pending_timer;
@@ -78,7 +78,7 @@ TEST(cluster_membership_impl, with_failure) {
   using namespace std::chrono_literals;
   completion_queue_type queue;
   std::shared_ptr<grpc::ChannelCredentials> credentials;
-  auto backoff = std::make_shared<gh::detail::exponential_backoff>(10ms, 24h, 1000);
+  auto backoff = std::make_shared<gh::detail::exponential_backoff>(10ms, 24h);
   cluster_membership_type cluster(queue, credentials, backoff, "localhost:22379", 30s);
 
   std::shared_ptr<deadline_timer> pending_timer;
@@ -168,7 +168,7 @@ TEST(cluster_membership_impl, with_empty_list) {
   using namespace std::chrono_literals;
   completion_queue_type queue;
   std::shared_ptr<grpc::ChannelCredentials> credentials;
-  auto backoff = std::make_shared<gh::detail::exponential_backoff>(10ms, 24h, 1000);
+  auto backoff = std::make_shared<gh::detail::exponential_backoff>(10ms, 24h);
   cluster_membership_type cluster(queue, credentials, backoff, "localhost:22379", 30s);
 
   std::shared_ptr<deadline_timer> pending_timer;
@@ -255,6 +255,6 @@ TEST(cluster_membership_impl, invalid_arguments) {
   using namespace std::chrono_literals;
   completion_queue_type queue;
   std::shared_ptr<grpc::ChannelCredentials> credentials;
-  auto backoff = std::make_shared<gh::detail::exponential_backoff>(10ms, 24h, 1000);
+  auto backoff = std::make_shared<gh::detail::exponential_backoff>(10ms, 24h);
   ASSERT_THROW(cluster_membership_type(queue, credentials, backoff, "localhost:22379", 500ms), std::exception);
 }

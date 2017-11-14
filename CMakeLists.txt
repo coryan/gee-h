@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-#
 
 cmake_minimum_required(VERSION 3.5)
 
@@ -102,7 +101,6 @@ add_library(gee_h SHARED
         gh/detail/async_op_counter.hpp
         gh/detail/async_op_counter.cpp
         gh/detail/async_rpc_op.hpp
-        gh/detail/backoff_strategy.hpp
         gh/detail/base_async_op.hpp
         gh/detail/base_completion_queue.hpp
         gh/detail/base_completion_queue.cpp
@@ -111,8 +109,10 @@ add_library(gee_h SHARED
         gh/detail/default_grpc_interceptor.hpp
         gh/detail/election_candidate_impl.hpp
         gh/detail/election_observer_impl.hpp
-        gh/detail/exponential_backoff.hpp
-        gh/detail/exponential_backoff.cpp
+        gh/detail/rpc_retry_policy.hpp
+        gh/detail/rpc_backoff_policy.hpp
+        gh/detail/rpc_policies.hpp
+        gh/detail/rpc_policies.cpp
         gh/detail/grpc_errors.hpp
         gh/detail/grpc_errors.cpp
         gh/detail/grpc_errors.cpp
@@ -128,6 +128,7 @@ add_library(gee_h SHARED
         gh/election_observer.cpp
         gh/leader_election.hpp
         gh/leader_election.cpp
+        gh/etcd_client.hpp
         gh/log.hpp
         gh/log.cpp
         gh/log_severity.hpp
@@ -141,7 +142,7 @@ add_library(gee_h SHARED
         gh/watch_election.cpp
         ${PROTO_SOURCES} ${PROTO_HDRS}
         ${GRPCPP_SOURCES} ${GRPCPP_HEADERS}
-        )
+        gh/etcd_client.cpp)
 target_link_libraries(gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
 
 add_executable(observe_election examples/observe_election.cpp)
@@ -187,40 +188,40 @@ if (NOT GEE_H_DISABLE_TESTS)
 
     # ... all the unit tests, we setup the targets and dependencies in a loop ...
     set(all_unit_tests
-            gh_active_completion_queue_ut
-            gh_assert_throw_ut
-            gh_completion_queue_ut
-            gh_detail_async_op_counter_ut
-            gh_detail_base_completion_queue_ut
-            gh_detail_cluster_membership_impl_ut
-            gh_detail_election_candidate_impl_ut
-            gh_detail_election_observer_impl_ut
-            gh_detail_exponential_backoff_ut
-            gh_detail_grpc_errors_ut
-            gh_detail_mocked_grpc_interceptor_ut
-            gh_detail_null_stream_ut
-            gh_detail_session_impl_ut
-            gh_detail_stream_future_status_ut
-            gh_log_ut
-            gh_log_severity_ut
-            gh_log_sink_ut
-            gh_prefix_end_ut
+            gh/active_completion_queue_ut.cpp
+            gh/assert_throw_ut.cpp
+            gh/completion_queue_ut.cpp
+            gh/detail/async_op_counter_ut.cpp
+            gh/detail/base_completion_queue_ut.cpp
+            gh/detail/cluster_membership_impl_ut.cpp
+            gh/detail/election_candidate_impl_ut.cpp
+            gh/detail/election_observer_impl_ut.cpp
+            gh/detail/rpc_policies_ut.cpp
+            gh/detail/grpc_errors_ut.cpp
+            gh/detail/mocked_grpc_interceptor_ut.cpp
+            gh/detail/null_stream_ut.cpp
+            gh/detail/session_impl_ut.cpp
+            gh/detail/stream_future_status_ut.cpp
+            gh/log_ut.cpp
+            gh/log_severity_ut.cpp
+            gh/log_sink_ut.cpp
+            gh/prefix_end_ut.cpp
             )
 
     # ... add the right libraries to all the unit tests, and also turn them into tests ...
     set(ut_sources)
-    foreach (target ${all_unit_tests})
-        string(REGEX MATCH ".*_ut$" is_ut ${target})
+    foreach (fname ${all_unit_tests})
+        string(REGEX MATCH ".*_ut.cpp$" is_ut ${fname})
         if (is_ut)
-            string(REGEX REPLACE "^gh_detail_" "gh/detail/" fname ${target})
-            string(REGEX REPLACE "^gh_" "gh/" fname ${fname})
-            add_executable(${target} ${fname}.cpp)
+            string(REPLACE "/" "_" target ${fname})
+            string(REPLACE ".cpp" "" target ${target})
+            add_executable(${target} ${fname})
             get_target_property(tname ${target} NAME)
             target_link_libraries(${target} gmock gtest gtest_main gee_h grpc++ grpc protobuf)
             add_test(${tname} ${target})
             get_target_property(sources ${target} SOURCES)
             set(ut_sources ${ut_sources} ${sources})
-        endif ()
+        endif (is_ut)
     endforeach ()
 
     # ... a giant executable with all the unit tests, this is convenient when using CLion ...
@@ -242,6 +243,7 @@ endif (NOT GEE_H_DISABLE_TESTS)
 
 add_executable(watcher_and_compaction experiments/watcher_and_compaction.cpp)
 target_link_libraries(watcher_and_compaction gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
+
 add_executable(cluster_failure_behavior experiments/cluster_failure_behavior.cpp)
 target_link_libraries(cluster_failure_behavior gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
 

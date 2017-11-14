@@ -3,7 +3,7 @@
 
 #include <gh/completion_queue.hpp>
 #include <gh/detail/async_rpc_op.hpp>
-#include <gh/detail/backoff_strategy.hpp>
+#include <gh/detail/rpc_backoff_policy.hpp>
 #include <gh/detail/deadline_timer.hpp>
 #include <gh/detail/default_grpc_interceptor.hpp>
 #include <etcd/etcdserver/etcdserverpb/rpc.grpc.pb.h>
@@ -40,7 +40,7 @@ public:
   template <typename duration_type>
   cluster_membership_impl(
       completion_queue_type& queue, std::shared_ptr<grpc::ChannelCredentials> credentials,
-      std::shared_ptr<backoff_strategy> backoff, std::string const& url, duration_type refresh_interval)
+      std::shared_ptr<rpc_backoff_policy> backoff, std::string const& url, duration_type refresh_interval)
       : queue_(queue)
       , credentials_(std::move(credentials))
       , backoff_strategy_(std::move(backoff))
@@ -52,7 +52,7 @@ public:
   template <typename duration_type>
   cluster_membership_impl(
       completion_queue_type& queue, std::shared_ptr<grpc::ChannelCredentials> credentials,
-      std::shared_ptr<backoff_strategy> backoff, std::initializer_list<std::string>&& l, duration_type refresh_interval)
+      std::shared_ptr<rpc_backoff_policy> backoff, std::initializer_list<std::string>&& l, duration_type refresh_interval)
       : queue_(queue)
       , credentials_(std::move(credentials))
       , backoff_strategy_(std::move(backoff))
@@ -98,7 +98,7 @@ private:
 
   void try_query_cluster_membership(std::vector<std::string> urls, std::size_t i) {
     if (i >= urls.size()) {
-      backoff_strategy_->record_failure();
+      backoff_strategy_->on_failure();
       return reset_refresh_timer();
     }
     auto channel = grpc::CreateChannel(urls[i], credentials_);
@@ -124,7 +124,6 @@ private:
     }
     std::lock_guard<std::mutex> lock(mu_);
     member_urls_.swap(new_urls);
-    backoff_strategy_->record_success();
     reset_refresh_timer();
   }
 
@@ -138,7 +137,7 @@ private:
 private:
   completion_queue_type& queue_;
   std::shared_ptr<grpc::ChannelCredentials> credentials_;
-  std::shared_ptr<backoff_strategy> backoff_strategy_;
+  std::shared_ptr<rpc_backoff_policy> backoff_strategy_;
 
   mutable std::mutex mu_;
   std::set<std::string> member_urls_;

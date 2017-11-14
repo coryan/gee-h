@@ -38,7 +38,7 @@ public:
 
   // Create an asynchronous operation to make a lease grant request.
   template<typename Functor> // f(future<std::int64_t>&) should be valid ...
-  virtual void grant_lease(
+  void grant_lease(
       std::shared_ptr<completion_queue> q, /* parameters unspecified */, Functor&& f);
   
   /// Ditto, but return a future.
