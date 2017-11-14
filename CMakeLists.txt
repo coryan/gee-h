@@ -195,7 +195,6 @@ if (NOT GEE_H_DISABLE_TESTS)
             gh_detail_cluster_membership_impl_ut
             gh_detail_election_candidate_impl_ut
             gh_detail_election_observer_impl_ut
-            gh_detail_etcd_client_ut
             gh_detail_exponential_backoff_ut
             gh_detail_grpc_errors_ut
             gh_detail_mocked_grpc_interceptor_ut
