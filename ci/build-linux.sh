@@ -19,6 +19,11 @@ echo cache args = $cacheargs;
 echo IMAGE = $IMAGE;
 echo IMAGE LATEST ID = $latest_id;
 
+EXTRA_ARGS=""
+if [ "x${NCPU}" != "x" ]; then
+  EXTRA_ARGS="--build-arg NCPU=${NCPU} "
+fi
+
 exec sudo docker build -t ${IMAGE?}:tip ${cacheargs?} \
     --build-arg DISTRO_VERSION=${DISTRO_VERSION?} \
     --build-arg CXX=${CXX?} \
@@ -26,4 +31,5 @@ exec sudo docker build -t ${IMAGE?}:tip ${cacheargs?} \
     --build-arg CMAKE_FLAGS="${CMAKE_FLAGS}" \
     --build-arg BUILD_EXTRA=${BUILD_EXTRA} \
     --build-arg TRAVIS_JOB_NUMBER=${TRAVIS_JOB_NUMBER} \
+    ${EXTRA_ARGS?} \
     -f ci/Dockerfile.${DISTRO?} .

@@ -43,10 +43,17 @@ RUN dnf makecache && \
     wget && \
   dnf clean all
 
+# ... capture the arguments that control the build ...
+ARG CXX=clang++
+ARG CC=clang
+ARG CMAKE_FLAGS=""
+ARG BUILD_EXTRA=""
+ARG NCPU=2
+
 WORKDIR /var/tmp/build-grpc
 RUN (git clone --depth 10 --branch v1.6.x https://github.com/grpc/grpc.git && \
     cd grpc && git pull && git submodule update --recursive --init && \
-    make -j 2 LDXX="g++ -std=c++11" LD=gcc CXX="g++ -std=c++11" CC=gcc HAS_SYSTEM_PROTOBUF=false && \
+    make -j ${NCPU} LDXX="g++ -std=c++11" LD=gcc CXX="g++ -std=c++11" CC=gcc HAS_SYSTEM_PROTOBUF=false && \
     make install && \
     cd third_party/protobuf && make install && \
     echo /usr/local/lib >/etc/ld.so.conf.d/local.conf && ldconfig)
@@ -60,12 +67,6 @@ RUN wget -q https://github.com/coreos/etcd/releases/download/v3.2.1/etcd-v3.2.1-
   /bin/rm -fr /var/tmp/install-etcd
 
 # ... by default, Fedora does not look for packages in /usr/local/lib/pkgconfig ...
-# ... capture the arguments that control the build ...
-ARG CXX=clang++
-ARG CC=clang
-ARG CMAKE_FLAGS=""
-ARG BUILD_EXTRA=""
-
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 
 # ... capture the Travis job number, effectively this busts the cache
@@ -81,22 +82,22 @@ COPY . /var/tmp/orig-gee-h/
 # ... build inside a sub-directory, easier to copy the artifacts that way
 WORKDIR /var/tmp/build-gee-h/build
 # ... run the configure / compile / test cycle ...
-RUN cmake ${CMAKE_FLAGS} .. && make -j 2
-RUN make -j 2 test || ( cat Testing/Temporary/LastTest.log; exit 1 )
+RUN cmake ${CMAKE_FLAGS} .. && make -j ${NCPU}
+RUN make -j ${NCPU} test || ( cat Testing/Temporary/LastTest.log; exit 1 )
 
 # ... verify that the install target works as expected ...
 RUN make install
 WORKDIR /var/tmp/build-gee-h/tests/install/build
-RUN cmake ${CMAKE_FLAGS} .. && make -j 2
+RUN cmake ${CMAKE_FLAGS} .. && make -j ${NCPU}
 
 # ... verify that the Doxygen code generation works ...
-WORKDIR /var/tmp/jaybeams
+WORKDIR /var/tmp/build-gee-h
 RUN doxygen doc/Doxyfile
 
 # ... verify that the code is properly formatted ...
-WORKDIR /var/tmp/jaybeams/build
+WORKDIR /var/tmp/build-gee-h/build
 RUN test "x${BUILD_EXTRA}" != "xcheck-style" || make clang-format
 WORKDIR /var/tmp/
-RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/jb build-gee-h/jb
+RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/gh build-gee-h/gh
 RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/examples build-gee-h/examples
 RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/experiments build-gee-h/experiments
