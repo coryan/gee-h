@@ -31,6 +31,7 @@ RUN dnf makecache && \
     clang \
     cmake \
     curl \
+    doxygen \
     gcc-c++ \
     git \
     lcov \

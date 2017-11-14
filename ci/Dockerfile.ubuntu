@@ -33,6 +33,7 @@ RUN apt-get update && \
     clang \
     cmake \
     curl \
+    doxygen \
     g++ \
     gcc \
     gcovr \
