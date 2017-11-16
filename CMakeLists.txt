@@ -142,7 +142,7 @@ add_library(gee_h SHARED
         gh/watch_election.cpp
         ${PROTO_SOURCES} ${PROTO_HDRS}
         ${GRPCPP_SOURCES} ${GRPCPP_HEADERS}
-        gh/etcd_client.cpp)
+        gh/etcd_client.cpp gh/detail/client_async_op.hpp)
 target_link_libraries(gee_h ${GRPCPP_LIBRARIES} ${GRPC_LIBRARIES} ${PROTOBUF_LIBRARIES})
 
 add_executable(observe_election examples/observe_election.cpp)
@@ -202,6 +202,7 @@ if (NOT GEE_H_DISABLE_TESTS)
             gh/detail/null_stream_ut.cpp
             gh/detail/session_impl_ut.cpp
             gh/detail/stream_future_status_ut.cpp
+            gh/etcd_client_ut.cpp
             gh/log_ut.cpp
             gh/log_severity_ut.cpp
             gh/log_sink_ut.cpp

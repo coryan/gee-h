@@ -15,33 +15,56 @@
 //   limitations under the License.
 
 #include <gh/completion_queue.hpp>
+#include <gh/detail/client_async_op.hpp>
 #include <gh/detail/rpc_backoff_policy.hpp>
 #include <gh/detail/rpc_retry_policy.hpp>
+
 #include <memory>
 #include <string>
 
+#include <etcd/etcdserver/etcdserverpb/rpc.grpc.pb.h>
+
 namespace gh {
+
 /**
  * A client to access a etcd cluster.
  */
 class etcd_client {
 public:
+  etcd_client(std::shared_ptr<grpc::ChannelCredentials> credentials, std::string url);
+
   template <typename Functor>
-  void grant_lease(std::int64_t lease, std::shared_ptr<gh::completion_queue<>> cq, Functor&& f) {
+  void grant_lease(std::int64_t lease, std::shared_ptr<gh::completion_queue<>> cq, Functor&& functor) {
+    auto rpc_retry = rpc_retry_->clone();
+    auto rpc_backoff = rpc_backoff_->clone();
+    detail::functor_promise_notify<etcdserverpb::LeaseGrantResponse, Functor> notifier(std::move(functor));
   }
 
-  std::future<std::int64_t> grant_lease(
-      std::int64_t lease, std::shared_ptr<gh::completion_queue<>> cq, gh::use_future) {
-    // gh::detail::client_op<std::int64_t>
-    return std::future<std::int64_t>();
+  std::future<etcdserverpb::LeaseGrantResponse>
+  grant_lease(std::int64_t lease, std::shared_ptr<gh::completion_queue<>> cq, gh::use_future) {
+    using d = detail::create_client_async_op<decltype(&etcdserverpb::Lease::Stub::AsyncLeaseGrant)>;
+    static_assert(d::pass::value, "no match");
+    using op_t = d::template future_op<&etcdserverpb::Lease::Stub::AsyncLeaseGrant>;
+    d::request_t request;
+    request.set_id(lease);
+    request.set_ttl(100);
+    auto op = std::make_shared<op_t>(rpc_backoff_->clone(), rpc_retry_->clone(), std::move(request), d::noop_t());
+
+    op->start(cq, current_channel());
+
+    return op->get_future();
   }
 
 private:
-  etcd_client(std::string url);
+  std::shared_ptr<grpc::Channel> current_channel();
 
 private:
   std::unique_ptr<gh::detail::rpc_backoff_policy> rpc_backoff_;
   std::unique_ptr<gh::detail::rpc_retry_policy> rpc_retry_;
+  std::shared_ptr<grpc::ChannelCredentials> credentials_;
+
+  mutable std::mutex mu_;
+  std::vector<std::string> urls_;
 };
 } // namespace gh
 

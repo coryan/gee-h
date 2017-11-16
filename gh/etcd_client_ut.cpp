@@ -12,24 +12,13 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
-#include <gh/etcd_client.hpp>
-#include <gh/detail/rpc_policies.hpp>
+#include "gh/etcd_client.hpp"
 
-using namespace std::chrono_literals;
+#include <gmock/gmock.h>
 
-namespace gh {
+TEST(etcd_client, simple) {
+  auto cq = std::make_shared<gh::completion_queue<>>();
+  gh::etcd_client client(grpc::InsecureChannelCredentials(), "localhost:2359");
 
-etcd_client::etcd_client(std::shared_ptr<grpc::ChannelCredentials> credentials, std::string url)
-    : rpc_backoff_(new gh::detail::exponential_backoff(10ms, 15min))
-    , rpc_retry_(new gh::detail::limited_time(4h))
-    , credentials_(credentials)
-    , mu_()
-    , urls_() {
-  urls_.emplace_back(url);
+  client.grant_lease(1234, cq, gh::use_future());
 }
-
-std::shared_ptr<grpc::Channel> etcd_client::current_channel() {
-  return grpc::CreateChannel(urls_[0], credentials_);
-}
-
-} // namespace gh
