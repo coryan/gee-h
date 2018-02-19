@@ -92,7 +92,7 @@ RUN CTEST_OUTPUT_ON_FAILURE=1 make -j ${NCPU} test
 # ... verify that the install target works as expected ...
 RUN make install
 WORKDIR /var/tmp/build-gee-h/tests/install/build
-RUN cmake ${CMAKE_FLAGS} .. && make -j ${NCPU}
+RUN test "x${BUILD_EXTRA}" != "xcheck-install" || (cmake ${CMAKE_FLAGS} .. && make -j ${NCPU})
 
 # ... verify that the Doxygen code generation works ...
 WORKDIR /var/tmp/build-gee-h
