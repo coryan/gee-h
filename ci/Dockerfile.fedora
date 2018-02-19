@@ -17,7 +17,7 @@
 
 # This Dockerfile requires docker 17 or higher, it uses an argument to set
 # the base image version, which was not supported in early versions of docker.
-ARG DISTRO_VERSION=24
+ARG DISTRO_VERSION=27
 FROM fedora:$DISTRO_VERSION
 MAINTAINER "Carlos O'Ryan <coryan@users.noreply.github.com>"
 
@@ -34,22 +34,29 @@ RUN dnf makecache && \
     doxygen \
     gcc-c++ \
     git \
+    golang \
     lcov \
     libtool \
     make \
     pkgconfig \
     python \
     shtool \
-    wget && \
+    wget \
+    zlib-devel && \
   dnf clean all
 
 # ... parallelize the build if possible, useful when testing locally ...
 ARG NCPU=2
 
 WORKDIR /var/tmp/build-grpc
-RUN (git clone --depth 10 --branch v1.6.x https://github.com/grpc/grpc.git && \
+RUN (git clone --depth 50  --branch v1.9.x https://github.com/grpc/grpc.git && \
     cd grpc && git pull && git submodule update --recursive --init && \
-    make -j ${NCPU} LDXX="g++ -std=c++11" LD=gcc CXX="g++ -std=c++11" CC=gcc HAS_SYSTEM_PROTOBUF=false && \
+    make -j ${NCPU} \
+       LD="gcc -Wno-implicit-fallthrough" \
+       CC="gcc -Wno-implicit-fallthrough" \
+       LDXX="g++ -std=c++11 -Wno-implicit-fallthrough -Wno-expansion-to-defined" \
+       CXX="g++ -std=c++11 -Wno-implicit-fallthrough -Wno-expansion-to-defined" \
+       HAS_SYSTEM_PROTOBUF=false && \
     make install && \
     cd third_party/protobuf && make install && \
     echo /usr/local/lib >/etc/ld.so.conf.d/local.conf && ldconfig)
@@ -57,10 +64,10 @@ RUN (git clone --depth 10 --branch v1.6.x https://github.com/grpc/grpc.git && \
 # ... install etcd and etcdctl in /usr/bin, they are used in the integration tests ...
 WORKDIR /var/tmp/install-etcd
 RUN wget -q https://github.com/coreos/etcd/releases/download/v3.2.1/etcd-v3.2.1-linux-amd64.tar.gz && \
-  tar -xf etcd-v3.2.1-linux-amd64.tar.gz && \
-  cp etcd-v3.2.1-linux-amd64/etcd /usr/bin && \
-  cp etcd-v3.2.1-linux-amd64/etcdctl /usr/bin && \
-  /bin/rm -fr /var/tmp/install-etcd
+    tar -xf etcd-v3.2.1-linux-amd64.tar.gz && \
+    cp etcd-v3.2.1-linux-amd64/etcd /usr/bin && \
+    cp etcd-v3.2.1-linux-amd64/etcdctl /usr/bin && \
+    /bin/rm -fr /var/tmp/install-etcd
 
 # ... by default, Fedora does not look for packages in /usr/local/lib/pkgconfig ...
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
@@ -81,11 +88,19 @@ WORKDIR /var/tmp/build-gee-h
 COPY . /var/tmp/build-gee-h/
 COPY . /var/tmp/orig-gee-h/
 
+# ... verify that the code is properly formatted ...
+WORKDIR /var/tmp/build-gee-h/build
+RUN test "x${BUILD_EXTRA}" != "xcheck-style" || make clang-format
+WORKDIR /var/tmp/
+RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/gh build-gee-h/gh
+RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/examples build-gee-h/examples
+RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/experiments build-gee-h/experiments
+
 # ... build inside a sub-directory, easier to copy the artifacts that way
 WORKDIR /var/tmp/build-gee-h/build
 # ... run the configure / compile / test cycle ...
 RUN cmake ${CMAKE_FLAGS} .. && make -j ${NCPU}
-RUN make -j ${NCPU} test || ( cat Testing/Temporary/LastTest.log; exit 1 )
+RUN CTEST_OUTPUT_ON_FAILURE=1 make -j ${NCPU} test
 
 # ... verify that the install target works as expected ...
 RUN make install
@@ -95,11 +110,3 @@ RUN cmake ${CMAKE_FLAGS} .. && make -j ${NCPU}
 # ... verify that the Doxygen code generation works ...
 WORKDIR /var/tmp/build-gee-h
 RUN doxygen doc/Doxyfile
-
-# ... verify that the code is properly formatted ...
-WORKDIR /var/tmp/build-gee-h/build
-RUN test "x${BUILD_EXTRA}" != "xcheck-style" || make clang-format
-WORKDIR /var/tmp/
-RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/gh build-gee-h/gh
-RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/examples build-gee-h/examples
-RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/experiments build-gee-h/experiments

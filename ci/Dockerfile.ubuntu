@@ -54,7 +54,7 @@ ARG NCPU=2
 
 # ... compile and install gRPC++ and Protobuf v3 ...
 WORKDIR /var/tmp/build-grpc
-RUN (git clone --depth 10 --branch v1.6.x https://github.com/grpc/grpc.git && \
+RUN (git clone --depth 10 --branch v1.9.x https://github.com/grpc/grpc.git && \
     cd grpc && git pull && git submodule update --recursive --init && \
     make -j ${NCPU} HAS_SYSTEM_PROTOBUF=false && make install && \
     cd third_party/protobuf && make install)
@@ -83,11 +83,19 @@ WORKDIR /var/tmp/build-gee-h
 COPY . /var/tmp/build-gee-h/
 COPY . /var/tmp/orig-gee-h/
 
+# ... verify that the code is properly formatted ...
+WORKDIR /var/tmp/build-gee-h/build
+RUN test "x${BUILD_EXTRA}" != "xcheck-style" || make clang-format
+WORKDIR /var/tmp/
+RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/gh build-gee-h/gh
+RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/examples build-gee-h/examples
+RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/experiments build-gee-h/experiments
+
 # ... build inside a sub-directory, easier to copy the artifacts that way
 WORKDIR /var/tmp/build-gee-h/build
 # ... run the configure / compile / test cycle ...
 RUN cmake ${CMAKE_FLAGS} .. && make -j ${NCPU}
-RUN make -j ${NCPU} test || ( cat Testing/Temporary/LastTest.log; exit 1 )
+RUN CTEST_OUTPUT_ON_FAILURE=1 make -j ${NCPU} test
 
 # ... verify that the install target works as expected ...
 RUN make install
@@ -98,10 +106,3 @@ RUN cmake ${CMAKE_FLAGS} .. && make -j ${NCPU}
 WORKDIR /var/tmp/build-gee-h
 RUN doxygen doc/Doxyfile
 
-# ... verify that the code is properly formatted ...
-WORKDIR /var/tmp/build-gee-h/build
-RUN test "x${BUILD_EXTRA}" != "xcheck-style" || make clang-format
-WORKDIR /var/tmp/
-RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/gh build-gee-h/gh
-RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/examples build-gee-h/examples
-RUN test "x${BUILD_EXTRA}" != "xcheck-style" || diff -r -u orig-gee-h/experiments build-gee-h/experiments

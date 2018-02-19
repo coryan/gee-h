@@ -2,8 +2,8 @@
 
 set -e
 
-if [ "x${LINUX_BUILD}" != "xyes" ]; then
-    echo "LINUX_BUILD is not set, exit successfully."
+if [ "${TRAVIS_OS_NAME}" != "linux" ]; then
+    echo "Skipping build; as this is not a Linux build."
     exit 0
 fi
 

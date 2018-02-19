@@ -7,31 +7,28 @@ matrix:
   include:
     - os: linux
       compiler: clang
-      env: LINUX_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04
+      env: DISTRO=ubuntu DISTRO_VERSION=16.04
     - os: linux
       compiler: clang
-      env: LINUX_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04 \
-           CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Debug"
+      env: CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Debug" \
+           DISTRO=ubuntu DISTRO_VERSION=17.10 \
     - os: linux
       compiler: clang
-      env: LINUX_BUILD=yes DISTRO=fedora DISTRO_VERSION=24 \
-           CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Debug"
+      env: CMAKE_FLAGS="-DCMAKE_BUILD_TYPE=Debug" \
+           DISTRO=fedora DISTRO_VERSION=27
     - os: linux
       compiler: clang
-      env: LINUX_BUILD=yes DISTRO=fedora DISTRO_VERSION=25
+      env: DISTRO=fedora DISTRO_VERSION=27
     - os: linux
       compiler: gcc
-      env: LINUX_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=16.04 \
-           CMAKE_FLAGS="-DCOVERAGE=ON -DCMAKE_BUILD_TYPE=Debug" BUILD_EXTRA=COVERAGE
+      env: CMAKE_FLAGS="-DCOVERAGE=ON -DCMAKE_BUILD_TYPE=Debug" \
+           BUILD_EXTRA=COVERAGE DISTRO=ubuntu DISTRO_VERSION=16.04
     - os: linux
       compiler: gcc
-      env: LINUX_BUILD=yes DISTRO=ubuntu DISTRO_VERSION=17.04
+      env: DISTRO=ubuntu DISTRO_VERSION=17.10
     - os: linux
       compiler: gcc
-      env: LINUX_BUILD=yes DISTRO=fedora DISTRO_VERSION=24
-    - os: linux
-      compiler: gcc
-      env: LINUX_BUILD=yes DISTRO=fedora DISTRO_VERSION=25
+      env: DISTRO=fedora DISTRO_VERSION=27
 
 script:
   - ci/build-linux.sh
@@ -50,9 +47,8 @@ after_success:
 cache:
   directories:
     - docker-images/ubuntu/16.04
-    - docker-images/ubuntu/17.04
-    - docker-images/fedora/24
-    - docker-images/fedora/25
+    - docker-images/ubuntu/17.10
+    - docker-images/fedora/27
 
 install:
   - ci/install-linux.sh
