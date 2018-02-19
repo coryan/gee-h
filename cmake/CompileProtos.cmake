@@ -122,20 +122,24 @@ function(GRPC_GENERATE_CPP SRCS HDRS MOCKS)
     set(${MOCKS} ${${MOCKS}} PARENT_SCOPE)
 endfunction()
 
-find_program(PROTOBUF_PROTOC_EXECUTABLE
-        NAMES protoc
-        DOC "The Google Protocol Buffers Compiler"
-        PATHS
-        ${PROTOBUF_SRC_ROOT_FOLDER}/vsprojects/${_PROTOBUF_ARCH_DIR}Release
-        ${PROTOBUF_SRC_ROOT_FOLDER}/vsprojects/${_PROTOBUF_ARCH_DIR}Debug
-        )
-mark_as_advanced(PROTOBUF_PROTOC_EXECUTABLE)
+if (NOT PROTOBUF_PROTOC_EXECUTABLE)
+    find_program(PROTOBUF_PROTOC_EXECUTABLE
+            NAMES protoc
+            DOC "The Google Protocol Buffers Compiler"
+            PATHS
+            ${PROTOBUF_SRC_ROOT_FOLDER}/vsprojects/${_PROTOBUF_ARCH_DIR}Release
+            ${PROTOBUF_SRC_ROOT_FOLDER}/vsprojects/${_PROTOBUF_ARCH_DIR}Debug
+            )
+    mark_as_advanced(PROTOBUF_PROTOC_EXECUTABLE)
+endif (NOT PROTOBUF_PROTOC_EXECUTABLE)
 
-find_program(PROTOC_GRPCPP_PLUGIN_EXECUTABLE
-        NAMES grpc_cpp_plugin
-        DOC "The Google Protocol Buffers Compiler"
-        PATHS
-        ${PROTOBUF_SRC_ROOT_FOLDER}/vsprojects/${_PROTOBUF_ARCH_DIR}Release
-        ${PROTOBUF_SRC_ROOT_FOLDER}/vsprojects/${_PROTOBUF_ARCH_DIR}Debug
-        )
-mark_as_advanced(PROTOC_GRPCPP_PLUGIN_EXECUTABLE)
+if (NOT PROTOC_GRPCPP_PLUGIN_EXECUTABLE)
+    find_program(PROTOC_GRPCPP_PLUGIN_EXECUTABLE
+            NAMES grpc_cpp_plugin
+            DOC "The Google Protocol Buffers Compiler"
+            PATHS
+            ${PROTOBUF_SRC_ROOT_FOLDER}/vsprojects/${_PROTOBUF_ARCH_DIR}Release
+            ${PROTOBUF_SRC_ROOT_FOLDER}/vsprojects/${_PROTOBUF_ARCH_DIR}Debug
+            )
+    mark_as_advanced(PROTOC_GRPCPP_PLUGIN_EXECUTABLE)
+endif (NOT PROTOC_GRPCPP_PLUGIN_EXECUTABLE)

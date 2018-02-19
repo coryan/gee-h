@@ -11,3 +11,8 @@
 	path = ext/etcd
 	url = https://github.com/coreos/etcd.git
 	branch = release-3.2
+[submodule "ext/grpc"]
+	path = ext/grpc
+	url = https://github.com/grpc/grpc.git
+	branch = v1.9.x
+	ignore = dirty

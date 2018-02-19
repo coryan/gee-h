@@ -15,8 +15,8 @@
 #   limitations under the License.
 #
 
-# This Dockerfile requires docker 17.06 or higher, it uses an argument to set
-# the base image version, which was not supported in early versions of docker.
+# This Dockerfile requires Docker 17 or higher, it uses an argument to set
+# the base image version, which was not supported in early versions of Docker.
 ARG DISTRO_VERSION=16.04
 FROM ubuntu:$DISTRO_VERSION
 MAINTAINER "Carlos O'Ryan <coryan@users.noreply.github.com>"
@@ -39,6 +39,7 @@ RUN apt-get update && \
     gcc \
     gcovr \
     git-core \
+    golang \
     lcov \
     libtool \
     lsb-release \
@@ -52,20 +53,13 @@ RUN apt-get update && \
 # ... parallelize the build if possible, useful when testing locally ...
 ARG NCPU=2
 
-# ... compile and install gRPC++ and Protobuf v3 ...
-WORKDIR /var/tmp/build-grpc
-RUN (git clone --depth 10 --branch v1.9.x https://github.com/grpc/grpc.git && \
-    cd grpc && git pull && git submodule update --recursive --init && \
-    make -j ${NCPU} HAS_SYSTEM_PROTOBUF=false && make install && \
-    cd third_party/protobuf && make install)
-
 # ... install etcd and etcdctl in /usr/bin, they are used in the integration tests ...
 WORKDIR /var/tmp/install-etcd
-RUN wget -q https://github.com/coreos/etcd/releases/download/v3.2.1/etcd-v3.2.1-linux-amd64.tar.gz && \
-  tar -xf etcd-v3.2.1-linux-amd64.tar.gz && \
-  cp etcd-v3.2.1-linux-amd64/etcd /usr/bin && \
-  cp etcd-v3.2.1-linux-amd64/etcdctl /usr/bin && \
-  /bin/rm -fr /var/tmp/install-etcd
+RUN wget -q https://github.com/coreos/etcd/releases/download/v3.3.1/etcd-v3.3.1-linux-amd64.tar.gz && \
+    tar -xf etcd-v3.3.1-linux-amd64.tar.gz && \
+    cp etcd-v3.3.1-linux-amd64/etcd /usr/bin && \
+    cp etcd-v3.3.1-linux-amd64/etcdctl /usr/bin && \
+    /bin/rm -fr /var/tmp/install-etcd
 
 # ... capture the arguments that control the build ...
 ARG CXX=clang++
@@ -105,4 +99,3 @@ RUN cmake ${CMAKE_FLAGS} .. && make -j ${NCPU}
 # ... verify that the Doxygen code generation works ...
 WORKDIR /var/tmp/build-gee-h
 RUN doxygen doc/Doxyfile
-
