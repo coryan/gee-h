@@ -233,7 +233,7 @@ TEST(session_impl, full_lifecycle) {
   // ... we hijack the lease_revoke operation to simulate the timer cancel ...
   EXPECT_CALL(*queue.interceptor().shared_mock, async_rpc(Truly([](auto op) {
     return op->name == "session/revoke/lease_revoke";
-  }))).WillOnce(Invoke([ t = std::ref(pending_timer), &session ](auto bop) {
+  }))).WillOnce(Invoke([t = std::ref(pending_timer)](auto bop) {
     auto pr = std::move(t.get());
     ASSERT_FALSE((bool)t.get());
     ASSERT_TRUE((bool)pr);
