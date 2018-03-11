@@ -22,7 +22,7 @@ fi
 
 IMAGE="gee-h-${DISTRO?}-${DISTRO_VERSION?}"
 
-exec sudo docker run --rm -it ${IMAGE?}:tip \
+exec sudo docker run --rm -it \
     --env DISTRO="${DISTRO}" \
     --env DISTRO_VERSION=${DISTRO_VERSION?} \
     --env CXX=${CXX?} \
@@ -30,6 +30,7 @@ exec sudo docker run --rm -it ${IMAGE?}:tip \
     --env CMAKE_FLAGS="${CMAKE_FLAGS}" \
     --env BUILD_EXTRA=${BUILD_EXTRA} \
     --env TRAVIS_JOB_NUMBER=${TRAVIS_JOB_NUMBER} \
-     --volume $PWD:/v --workdir /v "${IMAGE}:tip" /v/ci/build-in-docker.sh
+    --volume $PWD:/v --workdir /v \
+     "${IMAGE}:tip" /v/ci/build-in-docker.sh
 
 exit 0

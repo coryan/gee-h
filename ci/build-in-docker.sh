@@ -34,18 +34,16 @@ doxygen doc/Doxyfile
 
 # ... build inside a sub-directory, easier to copy the artifacts that way
 IMAGE="gee-h-${DISTRO?}-${DISTRO_VERSION?}"
-mkdir "/v/.build/${IMAGE}" || echo "${IMAGE} build directory already exists."
-cd "/v/.build/${IMAGE}"
 
-cmake ${CMAKE_FLAGS} ../..
-make -j ${NCPU}
-CTEST_OUTPUT_ON_FAILURE=1 make -j ${NCPU} test
+cmake -H. -B".build/${IMAGE}" ${CMAKE_FLAGS}
+cmake --build ".build/${IMAGE}" -- -j ${NCPU}
+cd "/v/.build/${IMAGE}"
+ctest --output-on-failure
 
 # ... verify that the install target works as expected ...
-make install
+cmake --build . --target install
 if [ "x${BUILD_EXTRA}" = "xcheck-install" ]; then
-  mkdir /v/tests/install/build
-  cd /v/tests/install/build
-  cmake ${CMAKE_FLAGS} .. && make -j ${NCPU}
+  cd /v/tests/install
+  cmake -H. -B.build ${CMAKE_FLAGS}
+  cmake --build .build -- -j ${NCPU}
 fi
-
