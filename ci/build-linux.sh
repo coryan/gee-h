@@ -1,4 +1,17 @@
 #!/bin/sh
+#   Copyright 2018 Carlos O'Ryan
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
 
 set -e
 
@@ -7,29 +20,16 @@ if [ "${TRAVIS_OS_NAME}" != "linux" ]; then
     exit 0
 fi
 
-IMAGE="cached-${DISTRO?}-${DISTRO_VERSION?}"
-latest_id=$(sudo docker inspect -f '{{ .Id }}' ${IMAGE?}:latest 2>/dev/null || echo "")
-cacheargs="";
-if [ "x${latest_id}" != "x" ]; then
-    cacheargs="--cache-from ${IMAGE?}:latest"
-fi
+IMAGE="gee-h-${DISTRO?}-${DISTRO_VERSION?}"
 
-echo "DEBUG information for build:"
-echo cache args = $cacheargs;
-echo IMAGE = $IMAGE;
-echo IMAGE LATEST ID = $latest_id;
+exec sudo docker run --rm -it ${IMAGE?}:tip \
+    --env DISTRO="${DISTRO}" \
+    --env DISTRO_VERSION=${DISTRO_VERSION?} \
+    --env CXX=${CXX?} \
+    --env CC=${CC?} \
+    --env CMAKE_FLAGS="${CMAKE_FLAGS}" \
+    --env BUILD_EXTRA=${BUILD_EXTRA} \
+    --env TRAVIS_JOB_NUMBER=${TRAVIS_JOB_NUMBER} \
+     --volume $PWD:/v --workdir /v "${IMAGE}:tip" /v/ci/build-in-docker.sh
 
-EXTRA_ARGS=""
-if [ "x${NCPU}" != "x" ]; then
-  EXTRA_ARGS="--build-arg NCPU=${NCPU} "
-fi
-
-exec sudo docker build -t ${IMAGE?}:tip ${cacheargs?} \
-    --build-arg DISTRO_VERSION=${DISTRO_VERSION?} \
-    --build-arg CXX=${CXX?} \
-    --build-arg CC=${CC?} \
-    --build-arg CMAKE_FLAGS="${CMAKE_FLAGS}" \
-    --build-arg BUILD_EXTRA=${BUILD_EXTRA} \
-    --build-arg TRAVIS_JOB_NUMBER=${TRAVIS_JOB_NUMBER} \
-    ${EXTRA_ARGS?} \
-    -f ci/Dockerfile.${DISTRO?} .
+exit 0
